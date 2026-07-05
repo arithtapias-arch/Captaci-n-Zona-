@@ -428,15 +428,67 @@
     font-size:11px;
     background:#fff;
   }
+
+  #appContent{display:none;}
+
+  #loginScreen{
+    position:fixed;
+    inset:0;
+    background:var(--bg);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:200;
+  }
+  .login-card{
+    background:var(--paper);
+    border:1.5px solid var(--ink);
+    padding:28px 24px;
+    max-width:360px;
+    width:100%;
+  }
+  .login-error{
+    color:var(--brick);
+    font-size:13px;
+    margin-bottom:10px;
+    display:none;
+  }
+  .login-error.show{display:block;}
 </style>
 </head>
 <body>
+
+<div id="loginScreen">
+  <div class="login-card">
+    <div class="eyebrow">Libro de registro</div>
+    <h1 style="margin-bottom:6px;">Acceso privado</h1>
+    <div class="subtitle" style="margin-bottom:18px;">Introduce tus credenciales para continuar</div>
+    <div class="row">
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="login-email" placeholder="tu@email.com">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Contraseña</label>
+        <input type="password" id="login-password" placeholder="••••••••">
+      </div>
+    </div>
+    <div id="loginError" class="login-error"></div>
+    <button class="btn-primary" id="loginBtn">Entrar</button>
+  </div>
+</div>
+
+<div id="appContent">
 
 <header>
   <div class="eyebrow">Libro de registro &mdash; captación puerta a puerta</div>
   <h1>Captación de Zona</h1>
   <div class="subtitle">Guarda cada visita: dirección, contacto y resultado</div>
   <div class="sync-status" id="syncDot">● Conectando…</div>
+  <button class="btn-secondary" id="logoutBtn" style="margin-bottom:12px;">Cerrar sesión</button>
   <div class="stats" id="stats">
     <div class="stat"><span class="num">0</span><span class="lbl">Fincas</span></div>
     <div class="stat"><span class="num">0</span><span class="lbl">Interesados</span></div>
@@ -592,12 +644,17 @@
   <button id="toastRetry">Reintentar</button>
 </div>
 
+</div>
+
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
 
 <script>
 /* ============================================================
    CONFIGURACIÓN DE FIREBASE
+   Pega aquí el objeto de configuración que te da la consola de
+   Firebase (Configuración del proyecto → Tus apps → SDK config).
    ============================================================ */
 const firebaseConfig = {
   apiKey: "AIzaSyCqLslzaYONrp0aCzcVInlDniixgZPXlJM",
@@ -612,6 +669,41 @@ const firebaseConfig = {
 firebase.initializeApp(firebaseConfig);
 const db = firebase.firestore();
 const fichasRef = db.collection('fichas');
+const auth = firebase.auth();
+
+auth.onAuthStateChanged(user => {
+  if(user){
+    document.getElementById('loginScreen').style.display = 'none';
+    document.getElementById('appContent').style.display = 'block';
+    startSync();
+  } else {
+    document.getElementById('loginScreen').style.display = 'flex';
+    document.getElementById('appContent').style.display = 'none';
+  }
+});
+
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  const email = document.getElementById('login-email').value.trim();
+  const password = document.getElementById('login-password').value;
+  const errBox = document.getElementById('loginError');
+  errBox.classList.remove('show');
+  if(!email || !password) return;
+  try{
+    await auth.signInWithEmailAndPassword(email, password);
+  }catch(e){
+    console.error('Error de acceso', e);
+    errBox.textContent = 'Email o contraseña incorrectos.';
+    errBox.classList.add('show');
+  }
+});
+
+document.getElementById('login-password').addEventListener('keydown', (e)=>{
+  if(e.key === 'Enter') document.getElementById('loginBtn').click();
+});
+
+document.getElementById('logoutBtn').addEventListener('click', ()=>{
+  auth.signOut();
+});
 
 let entries = [];
 let editingId = null;
@@ -634,6 +726,8 @@ function todayISO(){
   return new Date().toISOString().slice(0,10);
 }
 
+// Escucha la colección "fichas" en Firestore en tiempo real: cualquier
+// cambio hecho desde otro dispositivo llega aquí automáticamente.
 function startSync(){
   fichasRef.onSnapshot(
     snapshot => {
@@ -649,6 +743,8 @@ function startSync(){
   );
 }
 
+// Guarda o actualiza una sola ficha en la nube (merge conserva los
+// campos que no se estén tocando, como la fecha de creación).
 async function upsertFicha(id, data){
   try{
     await fichasRef.doc(id).set(data, {merge:true});
@@ -905,6 +1001,7 @@ function render(){
     return matchSearch && matchEstado && matchZona;
   });
 
+  // Stats
   const today = todayStr();
   const totalFincas = entries.length;
   const interesados = entries.filter(e=>e.estado==='interesado').length;
@@ -1001,7 +1098,8 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-startSync();
+// El arranque de la sincronización lo controla onAuthStateChanged,
+// una vez la persona ha iniciado sesión correctamente.
 </script>
 
 </body>
