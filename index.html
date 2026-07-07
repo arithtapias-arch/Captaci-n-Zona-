@@ -270,6 +270,38 @@
   }
   .entry-actions button.delete{color:var(--brick);}
 
+  .note-history{
+    margin-top:8px;
+    padding-top:8px;
+    border-top:1px dashed var(--bg-line);
+  }
+  .note-entry{
+    font-size:13px;
+    padding:6px 0;
+    border-top:1px dashed var(--bg-line);
+    line-height:1.4;
+  }
+  .note-entry:first-child{border-top:none; padding-top:0;}
+  .note-entry .note-date{
+    display:block;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10px;
+    letter-spacing:0.3px;
+    color:var(--brick);
+    text-transform:uppercase;
+    margin-bottom:2px;
+  }
+  .note-form{
+    margin-top:10px;
+    padding-top:10px;
+    border-top:1px dashed var(--bg-line);
+  }
+  .note-form textarea{
+    width:100%;
+    min-height:60px;
+    font-size:13px;
+  }
+
   .empty{
     text-align:center;
     padding:50px 20px;
@@ -708,6 +740,7 @@ document.getElementById('logoutBtn').addEventListener('click', ()=>{
 let entries = [];
 let editingId = null;
 let viewMode = 'list';
+let openNoteFormId = null;
 
 const estadoLabels = {
   'pendiente': 'Pendiente',
@@ -871,6 +904,8 @@ document.getElementById('viewStreets').addEventListener('click', ()=>{
 document.getElementById('list').addEventListener('click', async (e)=>{
   const editBtn = e.target.closest('.edit');
   const delBtn = e.target.closest('.delete');
+  const addNoteBtn = e.target.closest('.addnote');
+  const saveNoteBtn = e.target.closest('.savenote');
   if(editBtn){
     const id = editBtn.dataset.id;
     const entry = entries.find(x=>x.id===id);
@@ -880,6 +915,30 @@ document.getElementById('list').addEventListener('click', async (e)=>{
   if(delBtn){
     const id = delBtn.dataset.id;
     await deleteFicha(id);
+  }
+  if(addNoteBtn){
+    const id = addNoteBtn.dataset.id;
+    openNoteFormId = (openNoteFormId === id) ? null : id;
+    const box = document.getElementById('noteform-'+id);
+    if(box){
+      box.style.display = (openNoteFormId === id) ? 'block' : 'none';
+      if(openNoteFormId === id) document.getElementById('notetext-'+id).focus();
+    }
+  }
+  if(saveNoteBtn){
+    const id = saveNoteBtn.dataset.id;
+    const textarea = document.getElementById('notetext-'+id);
+    const texto = textarea.value.trim();
+    if(!texto) return;
+    const entry = entries.find(x=>x.id===id);
+    const historial = Array.isArray(entry?.notasSeguimiento) ? [...entry.notasSeguimiento] : [];
+    historial.push({
+      texto,
+      fecha: new Date().toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}),
+      ts: Date.now()
+    });
+    openNoteFormId = null;
+    await upsertFicha(id, { notasSeguimiento: historial });
   }
 });
 
@@ -952,10 +1011,13 @@ document.getElementById('restoreConfirm').addEventListener('click', async ()=>{
 });
 
 document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const headers = ['Fecha','Municipio','Zona','Nombre','Calle','Nº Finca','Piso','Puerta','Teléfono','Estado','Notas'];
-  const rows = entries.map(en=>[
-    en.fecha, en.municipio, en.zona, en.nombre, en.calle, en.numero, en.piso, en.puerta, en.telefono, estadoLabels[en.estado]||en.estado, (en.notas||'').replace(/\n/g,' ')
-  ]);
+  const headers = ['Fecha','Municipio','Zona','Nombre','Calle','Nº Finca','Piso','Puerta','Teléfono','Estado','Notas','Seguimiento'];
+  const rows = entries.map(en=>{
+    const seguimiento = Array.isArray(en.notasSeguimiento)
+      ? en.notasSeguimiento.map(n=>`[${n.fecha}] ${n.texto}`).join(' | ')
+      : '';
+    return [en.fecha, en.municipio, en.zona, en.nombre, en.calle, en.numero, en.piso, en.puerta, en.telefono, estadoLabels[en.estado]||en.estado, (en.notas||'').replace(/\n/g,' '), seguimiento];
+  });
   const csv = [headers, ...rows].map(r=>r.map(c=>`"${(c||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   openTextPanel(
     'Tus fichas en formato CSV',
@@ -1039,6 +1101,8 @@ function renderList(filtered, iso){
     const ubic = [en.numero ? `Nº ${en.numero}` : '', en.piso ? `${en.piso}º` : '', en.puerta || ''].filter(Boolean).join(' · ');
     const isDue = en.recordatorio && en.recordatorio <= iso;
     const lugar = [en.municipio ? escapeHtml(en.municipio) : '', en.zona ? 'Zona '+en.zona : ''].filter(Boolean).join(' · ');
+    const notasSeguimiento = Array.isArray(en.notasSeguimiento) ? [...en.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
+    const isOpenNote = openNoteFormId === en.id;
     return `
     <div class="entry ${isDue ? 'due' : ''}">
       <div class="entry-top">
@@ -1051,9 +1115,17 @@ function renderList(filtered, iso){
       </div>
       <div class="entry-meta">${ubic ? ubic + ' &nbsp;·&nbsp; ' : ''}${en.fecha}${en.telefono ? ' &nbsp;·&nbsp; '+escapeHtml(en.telefono) : ''}</div>
       ${en.notas ? `<div class="entry-notes">${escapeHtml(en.notas)}</div>` : ''}
+      ${notasSeguimiento.length ? `<div class="note-history">${notasSeguimiento.map(n=>`
+        <div class="note-entry"><span class="note-date">${n.fecha}</span>${escapeHtml(n.texto)}</div>
+      `).join('')}</div>` : ''}
       <div class="entry-actions">
         <button class="edit" data-id="${en.id}">Editar</button>
+        <button class="addnote" data-id="${en.id}">+ Nota</button>
         <button class="delete" data-id="${en.id}">Eliminar</button>
+      </div>
+      <div class="note-form" id="noteform-${en.id}" style="${isOpenNote ? '' : 'display:none;'}">
+        <textarea id="notetext-${en.id}" placeholder="Escribe la novedad..."></textarea>
+        <button class="btn-primary savenote" data-id="${en.id}" style="margin-top:6px;">Guardar nota</button>
       </div>
     </div>`;
   }).join('');
