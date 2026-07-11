@@ -225,6 +225,7 @@
   .stamp{
     font-family:'IBM Plex Mono', monospace;
     font-size:10px;
+    font-weight:700;
     letter-spacing:0.5px;
     text-transform:uppercase;
     border:1.5px solid;
@@ -234,11 +235,11 @@
     border-radius:3px;
     flex-shrink:0;
   }
-  .stamp.pendiente{color:var(--grey); border-color:var(--grey);}
-  .stamp.no-en-casa{color:var(--mustard); border-color:var(--mustard);}
-  .stamp.interesado{color:var(--green); border-color:var(--green); transform:rotate(-3deg) scale(1.02);}
-  .stamp.no-interesado{color:var(--brick); border-color:var(--brick);}
-  .stamp.volver{color:var(--blue); border-color:var(--blue);}
+  .stamp.pendiente{color:#5C5648; border-color:#5C5648; background:#E8E3D6;}
+  .stamp.no-en-casa{color:#A6650A; border-color:#A6650A; background:#FBE8C8;}
+  .stamp.interesado{color:#1F6B3A; border-color:#1F6B3A; background:#D9EFDF; transform:rotate(-3deg) scale(1.02);}
+  .stamp.no-interesado{color:#B23222; border-color:#B23222; background:#FADBD5;}
+  .stamp.volver{color:#1F5A80; border-color:#1F5A80; background:#D9EAF4;}
 
   .entry-meta{
     font-family:'IBM Plex Mono', monospace;
@@ -427,11 +428,11 @@
     margin-right:6px;
     flex-shrink:0;
   }
-  .dot.pendiente{background:var(--grey);}
-  .dot.no-en-casa{background:var(--mustard);}
-  .dot.interesado{background:var(--green);}
-  .dot.no-interesado{background:var(--brick);}
-  .dot.volver{background:var(--blue);}
+  .dot.pendiente{background:#5C5648;}
+  .dot.no-en-casa{background:#A6650A;}
+  .dot.interesado{background:#1F6B3A;}
+  .dot.no-interesado{background:#B23222;}
+  .dot.volver{background:#1F5A80;}
 
   .backup-panel{
     display:none;
@@ -507,12 +508,12 @@
   }
   .main-tabs button.active{background:var(--ink); color:var(--paper);}
 
-  .stamp.nuevo{color:var(--grey); border-color:var(--grey);}
-  .stamp.contactado{color:var(--blue); border-color:var(--blue);}
-  .stamp.visita{color:var(--mustard); border-color:var(--mustard);}
-  .stamp.oferta{color:#7A5AA8; border-color:#7A5AA8;}
-  .stamp.cerrado{color:var(--green); border-color:var(--green); transform:rotate(-3deg) scale(1.02);}
-  .stamp.descartado{color:var(--brick); border-color:var(--brick);}
+  .stamp.nuevo{color:#5C5648; border-color:#5C5648; background:#E8E3D6;}
+  .stamp.contactado{color:#1F5A80; border-color:#1F5A80; background:#D9EAF4;}
+  .stamp.visita{color:#A6650A; border-color:#A6650A; background:#FBE8C8;}
+  .stamp.oferta{color:#7433A8; border-color:#7433A8; background:#EBDBF5;}
+  .stamp.cerrado{color:#1F6B3A; border-color:#1F6B3A; background:#D9EFDF; transform:rotate(-3deg) scale(1.02);}
+  .stamp.descartado{color:#B23222; border-color:#B23222; background:#FADBD5;}
 
   .lead-sub{
     font-size:13px;
@@ -798,9 +799,15 @@
             <option value="descartado">Descartado</option>
           </select>
         </div>
+      </div>
+      <div class="row">
         <div class="field">
           <label>Próxima cita (opc.)</label>
           <input type="date" id="l-cita">
+        </div>
+        <div class="field small">
+          <label>Hora (opc.)</label>
+          <input type="time" id="l-cita-hora">
         </div>
       </div>
       <div class="row">
@@ -1122,11 +1129,12 @@ function openLeadForm(lead){
     document.getElementById('l-origen').value = lead.origen || '';
     document.getElementById('l-estado').value = lead.estado || 'nuevo';
     document.getElementById('l-cita').value = lead.cita || '';
+    document.getElementById('l-cita-hora').value = lead.citaHora || '';
     document.getElementById('l-notas').value = lead.notas || '';
   } else {
     editingLeadId = null;
     document.getElementById('leadFormTitle').textContent = 'Nuevo lead';
-    ['l-nombre','l-telefono','l-email','l-presupuesto','l-cita','l-notas'].forEach(id=>{
+    ['l-nombre','l-telefono','l-email','l-presupuesto','l-cita','l-cita-hora','l-notas'].forEach(id=>{
       document.getElementById(id).value = '';
     });
     document.getElementById('l-vivienda').value = '';
@@ -1189,6 +1197,7 @@ document.getElementById('saveLead').addEventListener('click', async ()=>{
     origen: document.getElementById('l-origen').value,
     estado: document.getElementById('l-estado').value,
     cita: document.getElementById('l-cita').value,
+    citaHora: document.getElementById('l-cita-hora').value,
     notas: document.getElementById('l-notas').value.trim(),
   };
   if(editingLeadId){
@@ -1213,6 +1222,13 @@ document.getElementById('leadsList').addEventListener('click', async (e)=>{
   const delBtn = e.target.closest('.delete-lead');
   const addNoteBtn = e.target.closest('.addnote-lead');
   const saveNoteBtn = e.target.closest('.savenote-lead');
+  const calBtn = e.target.closest('.addcal-lead');
+  if(calBtn){
+    const id = calBtn.dataset.id;
+    const lead = leads.find(x=>x.id===id);
+    if(lead) addLeadToCalendar(lead);
+    return;
+  }
   if(editBtn){
     const id = editBtn.dataset.id;
     const lead = leads.find(x=>x.id===id);
@@ -1590,6 +1606,87 @@ function renderStreets(filtered){
   }).join('');
 }
 
+// ===== Calendario nativo (.ics) =====
+function pad2(n){ return String(n).padStart(2,'0'); }
+
+function formatICSDateUTC(date){
+  return date.getUTCFullYear() + pad2(date.getUTCMonth()+1) + pad2(date.getUTCDate()) + 'T' +
+    pad2(date.getUTCHours()) + pad2(date.getUTCMinutes()) + pad2(date.getUTCSeconds()) + 'Z';
+}
+
+function escapeICS(str){
+  return (str||'').toString()
+    .replace(/\\/g,'\\\\')
+    .replace(/;/g,'\\;')
+    .replace(/,/g,'\\,')
+    .replace(/\n/g,'\\n');
+}
+
+function generateICS(lead){
+  const vivienda = viviendaLabel(lead.viviendaId);
+  const uid = 'lead-' + lead.id + '-' + Date.now() + '@captacionzona';
+  const dtstamp = formatICSDateUTC(new Date());
+  const [y, m, d] = lead.cita.split('-').map(Number);
+  const allDay = !lead.citaHora;
+  let dtstartLine, dtendLine;
+
+  if(allDay){
+    const startStr = `${y}${pad2(m)}${pad2(d)}`;
+    const endDate = new Date(y, m-1, d+1);
+    const endStr = `${endDate.getFullYear()}${pad2(endDate.getMonth()+1)}${pad2(endDate.getDate())}`;
+    dtstartLine = 'DTSTART;VALUE=DATE:' + startStr;
+    dtendLine = 'DTEND;VALUE=DATE:' + endStr;
+  } else {
+    const [hh, mm] = lead.citaHora.split(':').map(Number);
+    const startStr = `${y}${pad2(m)}${pad2(d)}T${pad2(hh)}${pad2(mm)}00`;
+    const endDate = new Date(y, m-1, d, hh, mm+60);
+    const endStr = `${endDate.getFullYear()}${pad2(endDate.getMonth()+1)}${pad2(endDate.getDate())}T${pad2(endDate.getHours())}${pad2(endDate.getMinutes())}00`;
+    dtstartLine = 'DTSTART:' + startStr;
+    dtendLine = 'DTEND:' + endStr;
+  }
+
+  const summary = escapeICS(`Visita: ${lead.nombre}${vivienda ? ' — '+vivienda : ''}`);
+  const location = escapeICS(vivienda);
+  const descParts = [];
+  if(lead.telefono) descParts.push('Tel: '+lead.telefono);
+  if(lead.presupuesto) descParts.push('Presupuesto: '+lead.presupuesto);
+  if(lead.notas) descParts.push(lead.notas);
+  const description = escapeICS(descParts.join('\n'));
+
+  const lines = [
+    'BEGIN:VCALENDAR',
+    'VERSION:2.0',
+    'PRODID:-//Captacion Zona//ES',
+    'CALSCALE:GREGORIAN',
+    'BEGIN:VEVENT',
+    'UID:'+uid,
+    'DTSTAMP:'+dtstamp,
+    dtstartLine,
+    dtendLine,
+    'SUMMARY:'+summary,
+    location ? 'LOCATION:'+location : null,
+    description ? 'DESCRIPTION:'+description : null,
+    'END:VEVENT',
+    'END:VCALENDAR'
+  ].filter(Boolean);
+
+  return lines.join('\r\n');
+}
+
+function addLeadToCalendar(lead){
+  if(!lead.cita) return;
+  const ics = generateICS(lead);
+  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.rel = 'noopener';
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
+  setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+
 function escapeHtml(str){
   if(!str) return '';
   const div = document.createElement('div');
@@ -1666,7 +1763,8 @@ function renderLeads(){
       <div class="lead-tags">
         ${l.presupuesto ? `<span class="lead-tag">${escapeHtml(l.presupuesto)}</span>` : ''}
         ${l.origen ? `<span class="lead-tag">${escapeHtml(l.origen)}</span>` : ''}
-        ${l.cita ? `<span class="lead-tag">Cita: ${l.cita.split('-').reverse().join('/')}</span>` : ''}
+        ${l.cita ? `<span class="lead-tag">Cita: ${l.cita.split('-').reverse().join('/')}${l.citaHora ? ' '+l.citaHora : ''}</span>` : ''}
+        ${l.cita ? `<button class="lead-tag addcal-lead" data-id="${l.id}">📅 Añadir a calendario</button>` : ''}
       </div>
       ${l.notas ? `<div class="entry-notes">${escapeHtml(l.notas)}</div>` : ''}
       ${notasSeguimiento.length ? `<div class="note-history">${notasSeguimiento.map(n=>`
