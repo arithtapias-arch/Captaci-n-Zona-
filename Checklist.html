@@ -1,0 +1,835 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Hoja de ruta</title>
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Special+Elite&family=IBM+Plex+Mono:wght@400;500;600&family=Inter:wght@400;500;600;700&display=swap');
+
+  :root{
+    --paper:#e7dfc8;
+    --paper-deep:#dcd2b4;
+    --card:#f6f1e2;
+    --ink:#2b2a26;
+    --ink-soft:#5c584c;
+    --map:#2f5460;
+    --map-soft:#3f6c7a;
+    --stamp:#a6342c;
+    --stamp-soft:#c8615a;
+    --brass:#8a7638;
+    --line:#c9bfa0;
+    --ok:#4f6b4a;
+  }
+
+  *{ box-sizing:border-box; }
+
+  .fw-root{
+    background:
+      repeating-linear-gradient(0deg, rgba(0,0,0,0.015) 0px, rgba(0,0,0,0.015) 1px, transparent 1px, transparent 3px),
+      var(--paper);
+    color:var(--ink);
+    font-family:'Inter', sans-serif;
+    padding:22px 16px 32px;
+    max-width:640px;
+    margin:0 auto;
+    border-radius:2px;
+  }
+
+  @media (prefers-reduced-motion: reduce){
+    .fw-root *{ animation-duration:0.001ms !important; transition-duration:0.001ms !important; }
+  }
+
+  /* Header / masthead */
+  .fw-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:flex-end;
+    border-bottom:2px solid var(--ink);
+    padding-bottom:10px;
+    margin-bottom:4px;
+  }
+  .fw-eyebrow{
+    font-family:'Special Elite', monospace;
+    font-size:11px;
+    letter-spacing:0.14em;
+    color:var(--brass);
+    text-transform:uppercase;
+  }
+  .fw-save-status{
+    font-family:'IBM Plex Mono', monospace; font-size:10px; letter-spacing:0.02em;
+    padding:3px 8px; border-radius:10px; color:var(--ink-soft); background:var(--paper-deep);
+    display:inline-block; margin-top:6px; opacity:0; transition:opacity .2s ease;
+  }
+  .fw-save-status.ok{ opacity:1; color:var(--ok); background:#dce6d8; }
+  .fw-save-status.saving{ opacity:1; }
+  .fw-save-status.error{ opacity:1; color:#fff; background:var(--stamp); cursor:pointer; }
+
+  .fw-backup-bar{
+    display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+    margin:2px 0 16px;
+  }
+  .fw-backup-btn{
+    font-family:'IBM Plex Mono', monospace; font-size:11.5px;
+    background:var(--paper-deep); border:1px solid var(--ink); color:var(--ink);
+    padding:8px 12px; border-radius:6px; cursor:pointer;
+  }
+  .fw-backup-btn:hover{ background:var(--map); color:#fff; border-color:var(--map); }
+  .fw-backup-msg{ font-family:'IBM Plex Mono', monospace; font-size:11px; color:var(--ok); opacity:0; transition:opacity .2s ease; }
+  .fw-backup-msg.show{ opacity:1; }
+
+  /* Daily goal */
+  .fw-goal{
+    background:var(--card);
+    border:1.5px dashed var(--brass);
+    border-radius:4px;
+    padding:12px 14px;
+    margin-bottom:16px;
+    position:relative;
+    overflow:hidden;
+  }
+  .fw-goal-head{
+    display:flex;
+    align-items:center;
+    gap:7px;
+    margin-bottom:9px;
+  }
+  .fw-goal-icon{ font-size:14px; }
+  .fw-goal-label{
+    font-family:'Special Elite', monospace;
+    font-size:13px;
+    letter-spacing:0.03em;
+    flex:1;
+  }
+  .fw-goal-stamp{
+    font-family:'Special Elite', monospace;
+    font-size:11px;
+    color:var(--stamp);
+    border:2px solid var(--stamp);
+    border-radius:4px;
+    padding:2px 7px;
+    transform:rotate(-7deg) scale(0.7);
+    opacity:0;
+    letter-spacing:0.06em;
+    transition:transform .28s cubic-bezier(.2,1.6,.4,1), opacity .2s ease;
+  }
+  .fw-goal-stamp.show{ opacity:0.9; transform:rotate(-7deg) scale(1); }
+  .fw-goal-body{
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    gap:18px;
+  }
+  .fw-goal-btn{
+    width:34px; height:34px;
+    border-radius:50%;
+    border:1.5px solid var(--map);
+    background:#fff;
+    color:var(--map);
+    font-size:18px;
+    line-height:1;
+    cursor:pointer;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+  }
+  .fw-goal-btn:hover{ background:var(--map); color:#fff; }
+  .fw-goal-btn:active{ transform:scale(0.94); }
+  .fw-goal-btn:disabled{ opacity:0.35; cursor:default; background:#fff; color:var(--map); }
+  .fw-goal-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:26px;
+    font-weight:600;
+    color:var(--ink);
+    min-width:60px;
+    text-align:center;
+  }
+  .fw-goal-target{ font-size:15px; color:var(--ink-soft); font-weight:400; }
+  .fw-goal-bar{
+    height:5px;
+    background:var(--paper-deep);
+    border-radius:3px;
+    margin-top:11px;
+    overflow:hidden;
+  }
+  .fw-goal-fill{
+    height:100%;
+    background:var(--map);
+    width:0%;
+    transition:width .25s ease, background .25s ease;
+  }
+  .fw-goal-fill.done{ background:var(--ok); }
+
+  .fw-title{
+    font-family:'Special Elite', monospace;
+    font-size:22px;
+    line-height:1.15;
+    margin-top:4px;
+  }
+  .fw-date{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    text-align:right;
+    color:var(--ink-soft);
+    display:flex;
+    flex-direction:column;
+    align-items:flex-end;
+  }
+  .fw-date b{ color:var(--ink); display:block; font-size:13px; text-transform:capitalize; }
+
+  /* Day type tabs */
+  .fw-tabs{
+    display:flex;
+    gap:6px;
+    margin:16px 0 18px;
+  }
+  .fw-tab{
+    flex:1;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12.5px;
+    letter-spacing:0.04em;
+    text-transform:uppercase;
+    padding:10px 8px;
+    text-align:center;
+    background:var(--paper-deep);
+    border:1px solid var(--line);
+    border-bottom:none;
+    color:var(--ink-soft);
+    cursor:pointer;
+    border-radius:6px 6px 0 0;
+    position:relative;
+    top:1px;
+  }
+  .fw-tab.active{
+    background:var(--card);
+    color:var(--ink);
+    font-weight:600;
+    border-color:var(--ink);
+    box-shadow:0 -2px 0 var(--map) inset;
+  }
+  .fw-tab:focus-visible{ outline:2px solid var(--map); outline-offset:2px; }
+
+  /* Sections */
+  .fw-card{
+    background:var(--card);
+    border:1px solid var(--ink);
+    border-radius:2px;
+    padding:16px 16px 14px;
+    margin-bottom:14px;
+    position:relative;
+    overflow:hidden;
+  }
+  .fw-card-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
+    margin-bottom:10px;
+  }
+  .fw-card-label{
+    font-family:'Special Elite', monospace;
+    font-size:14px;
+    letter-spacing:0.05em;
+  }
+  .fw-card-time{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+  }
+
+  .fw-item{
+    display:flex;
+    align-items:flex-start;
+    gap:10px;
+    padding:8px 0;
+    border-top:1px dashed var(--line);
+    cursor:pointer;
+  }
+  .fw-item:first-of-type{ border-top:none; }
+  .fw-check{
+    flex:none;
+    width:18px;
+    height:18px;
+    margin-top:1px;
+    border:1.5px solid var(--ink);
+    border-radius:3px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    background:#fff;
+  }
+  .fw-check svg{ width:12px; height:12px; opacity:0; transform:scale(0.6); transition:transform .15s ease, opacity .15s ease; }
+  .fw-item.done .fw-check{ background:var(--map); border-color:var(--map); }
+  .fw-item.done .fw-check svg{ opacity:1; transform:scale(1); }
+  .fw-item.done .fw-text{ color:var(--ink-soft); text-decoration:line-through; text-decoration-color:var(--line); }
+  .fw-text{ font-size:14.5px; line-height:1.4; padding-top:1px; }
+  .fw-item input{ position:absolute; opacity:0; pointer-events:none; }
+  .fw-item:focus-within .fw-check{ outline:2px solid var(--map); outline-offset:2px; }
+
+  /* Stamp */
+  .fw-stamp{
+    position:absolute;
+    top:12px;
+    right:14px;
+    font-family:'Special Elite', monospace;
+    font-size:12px;
+    color:var(--stamp);
+    border:2px solid var(--stamp);
+    border-radius:4px;
+    padding:3px 8px;
+    transform:rotate(-9deg) scale(0.7);
+    opacity:0;
+    letter-spacing:0.08em;
+    pointer-events:none;
+    transition:transform .28s cubic-bezier(.2,1.6,.4,1), opacity .2s ease;
+  }
+  .fw-stamp.show{ opacity:0.9; transform:rotate(-9deg) scale(1); }
+
+  /* Streak strip */
+  .fw-streak{
+    margin-top:18px;
+    border-top:2px solid var(--ink);
+    padding-top:12px;
+  }
+  .fw-streak-head{
+    display:flex;
+    justify-content:space-between;
+    align-items:baseline;
+    margin-bottom:8px;
+  }
+  .fw-streak-title{
+    font-family:'Special Elite', monospace;
+    font-size:12.5px;
+    letter-spacing:0.05em;
+  }
+  .fw-streak-count{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:12px;
+    color:var(--brass);
+  }
+  .fw-streak-count b{ font-size:15px; color:var(--stamp); }
+  .fw-days{
+    display:flex;
+    gap:5px;
+    flex-wrap:wrap;
+  }
+  .fw-day{
+    width:24px; height:24px;
+    border:1px solid var(--line);
+    border-radius:4px;
+    display:flex; align-items:center; justify-content:center;
+    font-family:'IBM Plex Mono', monospace;
+    font-size:9.5px;
+    color:var(--ink-soft);
+    background:var(--paper-deep);
+  }
+  .fw-day.full{ background:var(--map); border-color:var(--map); color:#fff; }
+  .fw-day.partial{ background:#cddbd0; border-color:var(--ok); color:var(--ink); }
+  .fw-day.today{ box-shadow:0 0 0 2px var(--stamp); }
+
+  .fw-foot-note{
+    margin-top:10px;
+    font-size:11.5px;
+    color:var(--ink-soft);
+    font-style:italic;
+  }
+
+  /* Login gate */
+  .lg-overlay{
+    position:fixed; inset:0;
+    background:var(--paper);
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    z-index:100;
+  }
+  .lg-box{
+    background:var(--card);
+    border:1px solid var(--ink);
+    border-radius:4px;
+    padding:26px 24px;
+    max-width:340px;
+    width:100%;
+  }
+  .lg-title{
+    font-family:'Special Elite', monospace;
+    font-size:19px;
+    margin-bottom:4px;
+  }
+  .lg-sub{
+    font-size:12.5px;
+    color:var(--ink-soft);
+    margin-bottom:18px;
+  }
+  .lg-field{ margin-bottom:12px; }
+  .lg-field label{
+    display:block; font-size:10px; text-transform:uppercase;
+    letter-spacing:0.05em; color:var(--ink-soft); margin-bottom:4px;
+  }
+  .lg-field input{
+    width:100%; border:1px solid var(--line); border-radius:4px;
+    background:#fff; padding:10px 11px; font-family:'Inter', sans-serif;
+    font-size:14px; color:var(--ink);
+  }
+  .lg-field input:focus{ outline:2px solid var(--map); outline-offset:1px; border-color:var(--map); }
+  .lg-btn{
+    width:100%; margin-top:6px;
+    background:var(--map); color:#fff; border:none; border-radius:4px;
+    padding:11px; font-family:'IBM Plex Mono', monospace; font-size:13px;
+    letter-spacing:0.04em; text-transform:uppercase; cursor:pointer;
+  }
+  .lg-btn:hover{ background:#26454f; }
+  .lg-btn:disabled{ opacity:0.6; cursor:default; }
+  .lg-error{
+    font-size:12px; color:var(--stamp); margin-top:10px; min-height:16px;
+  }
+  .lg-hidden{ display:none !important; }
+
+  .fw-logout{
+    font-family:'IBM Plex Mono', monospace;
+    font-size:10.5px;
+    color:var(--ink-soft);
+    text-decoration:underline;
+    cursor:pointer;
+    background:none; border:none; padding:0; margin-top:4px;
+  }
+</style>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
+</head>
+<body>
+
+<div class="lg-overlay" id="lg-overlay">
+  <div class="lg-box">
+    <div class="lg-title">Captación Zona</div>
+    <div class="lg-sub">Inicia sesión para continuar</div>
+    <form id="lg-form">
+      <div class="lg-field">
+        <label for="lg-email">Email</label>
+        <input type="email" id="lg-email" autocomplete="username" required />
+      </div>
+      <div class="lg-field">
+        <label for="lg-password">Contraseña</label>
+        <input type="password" id="lg-password" autocomplete="current-password" required />
+      </div>
+      <button type="submit" class="lg-btn" id="lg-btn">Entrar</button>
+      <div class="lg-error" id="lg-error"></div>
+    </form>
+  </div>
+</div>
+
+<div class="fw-root lg-hidden" id="fw-root">
+  <div class="fw-head">
+    <div>
+      <div class="fw-eyebrow">Ficha diaria · Captación &amp; contenido</div>
+      <span class="fw-save-status" id="fw-save-status"></span>
+      <div class="fw-title">Hoja de ruta</div>
+    </div>
+    <div class="fw-date">
+      <b id="fw-date-label">—</b>Ref. constancia
+      <button class="fw-logout" id="fw-logout">Cerrar sesión</button>
+    </div>
+  </div>
+
+  <div class="fw-tabs" role="tablist" aria-label="Tipo de día">
+    <button class="fw-tab" id="tab-calle" role="tab" aria-selected="false">🔑 Calle</button>
+    <button class="fw-tab" id="tab-contenido" role="tab" aria-selected="false">🎬 Contenido</button>
+  </div>
+
+  <div class="fw-goal" id="fw-goal">
+    <div class="fw-goal-head">
+      <span class="fw-goal-icon" id="fw-goal-icon">🎯</span>
+      <span class="fw-goal-label" id="fw-goal-text">Objetivo de hoy</span>
+      <span class="fw-goal-stamp" id="fw-goal-stamp">CUMPLIDO</span>
+    </div>
+    <div class="fw-goal-body">
+      <button class="fw-goal-btn" id="fw-goal-minus" aria-label="Restar">−</button>
+      <div class="fw-goal-count"><span id="fw-goal-count">0</span><span class="fw-goal-target" id="fw-goal-target">/3</span></div>
+      <button class="fw-goal-btn" id="fw-goal-plus" aria-label="Sumar">+</button>
+    </div>
+    <div class="fw-goal-bar"><div class="fw-goal-fill" id="fw-goal-fill"></div></div>
+  </div>
+
+  <div id="fw-sections"></div>
+
+  <div class="fw-backup-bar">
+    <button class="fw-backup-btn" id="fw-backup-btn">📋 Copiar hoja de hoy (respaldo)</button>
+    <span class="fw-backup-msg" id="fw-backup-msg"></span>
+  </div>
+
+  <div class="fw-streak">
+    <div class="fw-streak-head">
+      <div class="fw-streak-title">Racha de constancia</div>
+      <div class="fw-streak-count"><b id="fw-streak-num">0</b> días seguidos completos</div>
+    </div>
+    <div class="fw-days" id="fw-days"></div>
+    <div class="fw-foot-note">Un día "completo" es cuando cierras las 3 fichas: arranque, mediodía y cierre.</div>
+  </div>
+</div>
+
+<script>
+  const firebaseConfig = {
+    apiKey: "AIzaSyCqLslzaYONrp0aCzcVInlDniixgZPXlJM",
+    authDomain: "captacionzona.firebaseapp.com",
+    projectId: "captacionzona",
+    storageBucket: "captacionzona.firebasestorage.app",
+    messagingSenderId: "437136598052",
+    appId: "1:437136598052:web:6a674afb52e6c4792fa4b1"
+  };
+  firebase.initializeApp(firebaseConfig);
+  const auth = firebase.auth();
+  const db = firebase.firestore();
+  let currentUser = null;
+</script>
+<script>
+(function(){
+  const ITEMS = {
+    arranque: {
+      time: 'antes de salir / al empezar',
+      common: [
+        'Revisar la agenda: visitas y pendientes',
+        'Marcar la prioridad número uno de hoy'
+      ],
+      calle: ['Repasar qué calles o portales tocar hoy'],
+      contenido: ['Revisar el guion que toca grabar']
+    },
+    mediodia: {
+      time: 'huecos entre visitas / comida',
+      common: [
+        'Responder mensajes de Instagram y clientes',
+        'Agendar visitas o seguimientos pendientes'
+      ],
+      calle: [],
+      contenido: []
+    },
+    cierre: {
+      time: 'antes de acostarte',
+      common: [
+        'Anotar contactos de hoy: interesados, noes, pendientes',
+        'Dejar apuntado 1 pendiente clave para mañana'
+      ],
+      calle: ['Anotar el resultado del trabajo de zona de hoy'],
+      contenido: ['¿Grabaste o publicaste algo hoy?']
+    }
+  };
+
+  const SECTION_LABELS = { arranque: 'Arranque', mediodia: 'Mediodía', cierre: 'Cierre' };
+  const SECTION_ORDER = ['arranque','mediodia','cierre'];
+
+  function todayKey(){
+    const d = new Date();
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+  function fmtLabel(dateStr){
+    const d = new Date(dateStr+'T00:00:00');
+    return d.toLocaleDateString('es-ES', { weekday:'long', day:'numeric', month:'long' });
+  }
+
+  const root = document.getElementById('fw-root');
+  const dateLabel = document.getElementById('fw-date-label');
+  const saveStatusEl = document.getElementById('fw-save-status');
+  const sectionsEl = document.getElementById('fw-sections');
+  const tabCalle = document.getElementById('tab-calle');
+  const tabContenido = document.getElementById('tab-contenido');
+  const daysEl = document.getElementById('fw-days');
+  const streakNum = document.getElementById('fw-streak-num');
+
+  const TODAY = todayKey();
+  dateLabel.textContent = fmtLabel(TODAY);
+
+  let state = { dayType: 'calle', goal: 0, checked: { arranque:[], mediodia:[], cierre:[] } };
+
+  const GOALS = {
+    calle: { icon:'🚪', label:'contactos nuevos', target:3 },
+    contenido: { icon:'🎬', label:'vídeos grabados', target:2 }
+  };
+  const goalIcon = document.getElementById('fw-goal-icon');
+  const goalText = document.getElementById('fw-goal-text');
+  const goalStamp = document.getElementById('fw-goal-stamp');
+  const goalCount = document.getElementById('fw-goal-count');
+  const goalTarget = document.getElementById('fw-goal-target');
+  const goalFill = document.getElementById('fw-goal-fill');
+  const goalMinus = document.getElementById('fw-goal-minus');
+  const goalPlus = document.getElementById('fw-goal-plus');
+
+  function renderGoal(){
+    const g = GOALS[state.dayType];
+    const count = state.goal || 0;
+    goalIcon.textContent = g.icon;
+    goalText.textContent = `Objetivo de hoy: ${g.target} ${g.label}`;
+    goalCount.textContent = count;
+    goalTarget.textContent = '/'+g.target;
+    const pct = Math.min(100, Math.round((count/g.target)*100));
+    goalFill.style.width = pct+'%';
+    const done = count >= g.target;
+    goalFill.classList.toggle('done', done);
+    goalStamp.classList.toggle('show', done);
+    goalMinus.disabled = count<=0;
+  }
+
+  goalMinus.addEventListener('click', ()=>{
+    state.goal = Math.max(0, (state.goal||0) - 1);
+    save(); renderGoal();
+  });
+  goalPlus.addEventListener('click', ()=>{
+    state.goal = (state.goal||0) + 1;
+    save(); renderGoal();
+  });
+
+  function itemsFor(section){
+    const def = ITEMS[section];
+    return def.common.concat(def[state.dayType] || []);
+  }
+
+  function isSectionDone(section){
+    const items = itemsFor(section);
+    const checked = state.checked[section] || [];
+    return items.length>0 && items.every((_,i)=>checked[i]);
+  }
+
+  function render(){
+    tabCalle.classList.toggle('active', state.dayType==='calle');
+    tabContenido.classList.toggle('active', state.dayType==='contenido');
+    tabCalle.setAttribute('aria-selected', state.dayType==='calle');
+    tabContenido.setAttribute('aria-selected', state.dayType==='contenido');
+
+    sectionsEl.innerHTML = '';
+    SECTION_ORDER.forEach(section=>{
+      const items = itemsFor(section);
+      const checked = state.checked[section] || [];
+      const done = isSectionDone(section);
+
+      const card = document.createElement('div');
+      card.className = 'fw-card';
+
+      const head = document.createElement('div');
+      head.className = 'fw-card-head';
+      head.innerHTML = `<span class="fw-card-label">${SECTION_LABELS[section]}</span><span class="fw-card-time">${ITEMS[section].time}</span>`;
+      card.appendChild(head);
+
+      items.forEach((text,i)=>{
+        const row = document.createElement('label');
+        row.className = 'fw-item' + (checked[i] ? ' done' : '');
+        row.innerHTML = `
+          <input type="checkbox" ${checked[i]?'checked':''} />
+          <span class="fw-check"><svg viewBox="0 0 24 24" fill="none" stroke="white" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg></span>
+          <span class="fw-text">${text}</span>
+        `;
+        row.querySelector('input').addEventListener('change', (e)=>{
+          const arr = state.checked[section] || [];
+          arr[i] = e.target.checked;
+          state.checked[section] = arr;
+          save();
+          render();
+        });
+        card.appendChild(row);
+      });
+
+      const stamp = document.createElement('div');
+      stamp.className = 'fw-stamp' + (done ? ' show' : '');
+      stamp.textContent = 'HECHO';
+      card.appendChild(stamp);
+
+      sectionsEl.appendChild(card);
+    });
+    renderGoal();
+  }
+
+  function docRefFor(dateKey){
+    return db.collection('users').doc(currentUser.uid).collection('checklist_dias').doc(dateKey);
+  }
+
+  function setSaveStatus(status){
+    if(!saveStatusEl) return;
+    saveStatusEl.className = 'fw-save-status ' + status;
+    saveStatusEl.textContent = status==='ok' ? 'Sincronizado ✓'
+      : status==='saving' ? 'Guardando…'
+      : status==='error' ? '⚠ No se guardó — toca para reintentar'
+      : '';
+  }
+
+  function save(){
+    if(!currentUser) return;
+    setSaveStatus('saving');
+    docRefFor(TODAY).set({
+      dayType: state.dayType,
+      goal: state.goal || 0,
+      checked: state.checked,
+      updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+    }, { merge:true }).then(()=>{
+      setSaveStatus('ok');
+    }).catch(err=>{
+      console.error('No se pudo guardar', err);
+      setSaveStatus('error');
+    });
+    renderStreak();
+  }
+
+  let unsubscribeToday = null;
+
+  function attachTodayListener(){
+    if(unsubscribeToday) unsubscribeToday();
+    unsubscribeToday = docRefFor(TODAY).onSnapshot(snap=>{
+      if(snap.exists){
+        const data = snap.data();
+        state = Object.assign(state, data);
+        SECTION_ORDER.forEach(s=>{ if(!state.checked[s]) state.checked[s]=[]; });
+      }
+      render();
+      renderStreak();
+    }, err=>{
+      console.error('Error de sincronización', err);
+      setSaveStatus('error');
+    });
+  }
+
+  const streakCache = {};
+
+  async function loadStreakCache(){
+    const keys = [];
+    for(let i=13;i>=1;i--) keys.push(dateKeyOffset(-i));
+    await Promise.all(keys.map(key=>
+      docRefFor(key).get().then(snap=>{
+        streakCache[key] = snap.exists ? snap.data() : null;
+      }).catch(()=>{ streakCache[key] = null; })
+    ));
+  }
+
+  function dateKeyOffset(offset){
+    const d = new Date();
+    d.setDate(d.getDate()+offset);
+    return d.getFullYear()+'-'+String(d.getMonth()+1).padStart(2,'0')+'-'+String(d.getDate()).padStart(2,'0');
+  }
+
+  function renderStreak(){
+    daysEl.innerHTML = '';
+    const results = [];
+    for(let i=13;i>=0;i--){
+      const key = dateKeyOffset(-i);
+      let dayState = null;
+      if(key===TODAY){
+        dayState = state;
+      } else {
+        dayState = streakCache[key] || null;
+      }
+      let status = 'empty';
+      if(dayState){
+        const doneCount = SECTION_ORDER.filter(s=>{
+          const def = ITEMS[s];
+          const items = def.common.concat(def[dayState.dayType||'calle']||[]);
+          const checked = (dayState.checked && dayState.checked[s]) || [];
+          return items.length>0 && items.every((_,idx)=>checked[idx]);
+        }).length;
+        if(doneCount===3) status='full';
+        else if(doneCount>0) status='partial';
+      }
+      results.push({key, status});
+
+      const cell = document.createElement('div');
+      cell.className = 'fw-day ' + status + (key===TODAY?' today':'');
+      const d = new Date(key+'T00:00:00');
+      cell.textContent = d.getDate();
+      cell.title = key;
+      daysEl.appendChild(cell);
+    }
+    let streak = 0;
+    for(let i=results.length-1;i>=0;i--){
+      if(results[i].status==='full') streak++;
+      else break;
+    }
+    streakNum.textContent = streak;
+  }
+
+  tabCalle.addEventListener('click', ()=>{ state.dayType='calle'; save(); render(); });
+  tabContenido.addEventListener('click', ()=>{ state.dayType='contenido'; save(); render(); });
+
+  const lgOverlay = document.getElementById('lg-overlay');
+  const lgForm = document.getElementById('lg-form');
+  const lgEmail = document.getElementById('lg-email');
+  const lgPassword = document.getElementById('lg-password');
+  const lgBtn = document.getElementById('lg-btn');
+  const lgError = document.getElementById('lg-error');
+  const logoutBtn = document.getElementById('fw-logout');
+
+  function mapAuthError(code){
+    const map = {
+      'auth/invalid-email': 'Email no válido.',
+      'auth/user-not-found': 'No existe una cuenta con ese email.',
+      'auth/wrong-password': 'Contraseña incorrecta.',
+      'auth/invalid-credential': 'Email o contraseña incorrectos.',
+      'auth/too-many-requests': 'Demasiados intentos. Espera un momento.'
+    };
+    return map[code] || 'No se pudo iniciar sesión. Inténtalo de nuevo.';
+  }
+
+  lgForm.addEventListener('submit', (e)=>{
+    e.preventDefault();
+    lgError.textContent = '';
+    lgBtn.disabled = true;
+    auth.signInWithEmailAndPassword(lgEmail.value.trim(), lgPassword.value)
+      .catch(err=>{ lgError.textContent = mapAuthError(err.code); })
+      .finally(()=>{ lgBtn.disabled = false; });
+  });
+
+  logoutBtn.addEventListener('click', ()=>{
+    if(unsubscribeToday) unsubscribeToday();
+    auth.signOut();
+  });
+
+  auth.onAuthStateChanged(async (user)=>{
+    if(user){
+      currentUser = user;
+      lgOverlay.classList.add('lg-hidden');
+      root.classList.remove('lg-hidden');
+      await loadStreakCache();
+      attachTodayListener();
+    } else {
+      currentUser = null;
+      lgOverlay.classList.remove('lg-hidden');
+      root.classList.add('lg-hidden');
+    }
+  });
+
+  saveStatusEl.addEventListener('click', ()=>{
+    if(saveStatusEl.classList.contains('error')) save();
+  });
+
+  const backupBtn = document.getElementById('fw-backup-btn');
+  const backupMsg = document.getElementById('fw-backup-msg');
+
+  function buildBackupText(){
+    const g = GOALS[state.dayType];
+    const lines = [
+      `Hoja de ruta — ${TODAY} (${state.dayType==='calle'?'Calle':'Contenido'})`,
+      `Meta: ${state.goal||0} de ${g.target} ${g.label}`,
+      ''
+    ];
+    SECTION_ORDER.forEach(section=>{
+      lines.push(SECTION_LABELS[section]+':');
+      const items = itemsFor(section);
+      const checked = state.checked[section] || [];
+      items.forEach((text,i)=>{
+        lines.push(`  [${checked[i] ? 'x' : ' '}] ${text}`);
+      });
+      lines.push('');
+    });
+    return lines.join('\n');
+  }
+
+  backupBtn.addEventListener('click', async ()=>{
+    const text = buildBackupText();
+    try{
+      await navigator.clipboard.writeText(text);
+      backupMsg.textContent = 'Copiado ✓ — pégalo en Notas';
+    }catch(e){
+      backupMsg.textContent = 'No se pudo copiar automáticamente';
+    }
+    backupMsg.classList.add('show');
+    setTimeout(()=>backupMsg.classList.remove('show'), 2500);
+  });
+})();
+</script>
+
+</body>
+</html>
