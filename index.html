@@ -514,6 +514,7 @@
   .stamp.oferta{color:#7433A8; border-color:#7433A8; background:#EBDBF5;}
   .stamp.cerrado{color:#1F6B3A; border-color:#1F6B3A; background:#D9EFDF; transform:rotate(-3deg) scale(1.02);}
   .stamp.descartado{color:#B23222; border-color:#B23222; background:#FADBD5;}
+  .stamp.seguimiento{color:#0F6E68; border-color:#0F6E68; background:#D6EEEC;}
 
   .lead-sub{
     font-size:13px;
@@ -582,6 +583,7 @@
   <div class="main-tabs">
     <button id="tabCaptacion" class="active">Captación</button>
     <button id="tabLeads">Leads</button>
+    <button id="tabSeguimientos">Seguimientos</button>
   </div>
 
   <div id="captacionView">
@@ -797,7 +799,21 @@
             <option value="oferta">Oferta presentada</option>
             <option value="cerrado">Cerrado (ganado)</option>
             <option value="descartado">Descartado</option>
+            <option value="seguimiento">Seguimiento futuro</option>
           </select>
+        </div>
+      </div>
+      <div class="row">
+        <div class="field">
+          <label>Interés a futuro (opc.)</label>
+          <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
+              <input type="checkbox" id="l-interes-viviendas" style="width:auto;"> Más viviendas
+            </label>
+            <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
+              <input type="checkbox" id="l-interes-financiero" style="width:auto;"> Asesoría financiera
+            </label>
+          </div>
         </div>
       </div>
       <div class="row">
@@ -832,6 +848,7 @@
         <option value="oferta">Oferta presentada</option>
         <option value="cerrado">Cerrado</option>
         <option value="descartado">Descartado</option>
+        <option value="seguimiento">Seguimiento futuro</option>
       </select>
     </div>
 
@@ -840,6 +857,21 @@
     <div id="leadsList" class="loading">Cargando leads...</div>
 
     <button class="btn-secondary" id="exportLeadsBtn" style="width:100%; margin-top:6px;">Exportar CSV</button>
+  </div>
+
+  <div id="seguimientosView" style="display:none;">
+    <button class="btn-primary" id="toggleSeguimientoForm" style="margin-top:16px;">+ Nuevo seguimiento</button>
+
+    <div class="toolbar">
+      <input type="text" id="seguimientoSearch" placeholder="Buscar por nombre o vivienda...">
+      <select id="filterSeguimientoInteres">
+        <option value="">Interés: Todos</option>
+        <option value="viviendas">Más viviendas</option>
+        <option value="financiero">Asesoría financiera</option>
+      </select>
+    </div>
+
+    <div id="seguimientosList" class="loading">Cargando seguimientos...</div>
   </div>
 </main>
 
@@ -929,7 +961,8 @@ const leadEstadoLabels = {
   'visita': 'Visita agendada',
   'oferta': 'Oferta presentada',
   'cerrado': 'Cerrado',
-  'descartado': 'Descartado'
+  'descartado': 'Descartado',
+  'seguimiento': 'Seguimiento futuro'
 };
 
 const estadoLabels = {
@@ -947,6 +980,17 @@ function todayStr(){
 
 function todayISO(){
   return new Date().toISOString().slice(0,10);
+}
+
+// Una ficha "pide atención hoy" si su recordatorio está vencido o es de hoy.
+function fichaIsDue(en, iso){
+  return !!(en.recordatorio && en.recordatorio <= iso);
+}
+
+// Un lead "pide atención hoy" si su próxima cita está vencida o es de hoy,
+// y el proceso sigue abierto (no cerrado ni descartado).
+function leadIsDue(l, iso){
+  return !!(l.cita && l.cita <= iso && l.estado !== 'cerrado' && l.estado !== 'descartado');
 }
 
 // Escucha la colección "fichas" en Firestore en tiempo real: cualquier
@@ -1011,6 +1055,7 @@ function startLeadsSync(){
       leads = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       leads.sort((a,b) => (b.createdAt||0) - (a.createdAt||0));
       renderLeads();
+      renderSeguimientos();
     },
     error => console.error('Error de sincronización de leads', error)
   );
@@ -1114,7 +1159,7 @@ document.getElementById('toggleForm').addEventListener('click', ()=>openForm(nul
 document.getElementById('cancelForm').addEventListener('click', closeForm);
 
 // ===== Formulario de leads =====
-function openLeadForm(lead){
+function openLeadForm(lead, presetEstado){
   document.getElementById('leadFormCard').classList.add('open');
   document.getElementById('toggleLeadForm').style.display = 'none';
   refreshViviendaSelect();
@@ -1131,6 +1176,8 @@ function openLeadForm(lead){
     document.getElementById('l-cita').value = lead.cita || '';
     document.getElementById('l-cita-hora').value = lead.citaHora || '';
     document.getElementById('l-notas').value = lead.notas || '';
+    document.getElementById('l-interes-viviendas').checked = !!lead.interesMasViviendas;
+    document.getElementById('l-interes-financiero').checked = !!lead.interesAsesoria;
   } else {
     editingLeadId = null;
     document.getElementById('leadFormTitle').textContent = 'Nuevo lead';
@@ -1139,7 +1186,9 @@ function openLeadForm(lead){
     });
     document.getElementById('l-vivienda').value = '';
     document.getElementById('l-origen').value = '';
-    document.getElementById('l-estado').value = 'nuevo';
+    document.getElementById('l-estado').value = presetEstado || 'nuevo';
+    document.getElementById('l-interes-viviendas').checked = false;
+    document.getElementById('l-interes-financiero').checked = false;
   }
 }
 
@@ -1198,6 +1247,8 @@ document.getElementById('saveLead').addEventListener('click', async ()=>{
     estado: document.getElementById('l-estado').value,
     cita: document.getElementById('l-cita').value,
     citaHora: document.getElementById('l-cita-hora').value,
+    interesMasViviendas: document.getElementById('l-interes-viviendas').checked,
+    interesAsesoria: document.getElementById('l-interes-financiero').checked,
     notas: document.getElementById('l-notas').value.trim(),
   };
   if(editingLeadId){
@@ -1217,7 +1268,7 @@ document.getElementById('saveLead').addEventListener('click', async ()=>{
 document.getElementById('leadSearch').addEventListener('input', renderLeads);
 document.getElementById('filterLeadEstado').addEventListener('change', renderLeads);
 
-document.getElementById('leadsList').addEventListener('click', async (e)=>{
+async function handleLeadCardClick(e){
   const editBtn = e.target.closest('.edit-lead');
   const delBtn = e.target.closest('.delete-lead');
   const addNoteBtn = e.target.closest('.addnote-lead');
@@ -1233,7 +1284,7 @@ document.getElementById('leadsList').addEventListener('click', async (e)=>{
     const id = editBtn.dataset.id;
     const lead = leads.find(x=>x.id===id);
     if(lead) openLeadForm(lead);
-    document.getElementById('leadsView').scrollIntoView({behavior:'smooth'});
+    window.scrollTo({top:0, behavior:'smooth'});
   }
   if(delBtn){
     const id = delBtn.dataset.id;
@@ -1263,7 +1314,13 @@ document.getElementById('leadsList').addEventListener('click', async (e)=>{
     openLeadNoteFormId = null;
     await upsertLead(id, { notasSeguimiento: historial });
   }
-});
+}
+document.getElementById('leadsList').addEventListener('click', handleLeadCardClick);
+document.getElementById('seguimientosList').addEventListener('click', handleLeadCardClick);
+
+document.getElementById('toggleSeguimientoForm').addEventListener('click', ()=>openLeadForm(null, 'seguimiento'));
+document.getElementById('seguimientoSearch').addEventListener('input', renderSeguimientos);
+document.getElementById('filterSeguimientoInteres').addEventListener('change', renderSeguimientos);
 
 document.getElementById('exportLeadsBtn').addEventListener('click', ()=>{
   const headers = ['Fecha','Nombre','Teléfono','Email','Vivienda','Presupuesto','Origen','Estado','Próxima cita','Notas','Seguimiento'];
@@ -1331,18 +1388,16 @@ document.getElementById('viewStreets').addEventListener('click', ()=>{
   render();
 });
 
-document.getElementById('tabCaptacion').addEventListener('click', ()=>{
-  document.getElementById('tabCaptacion').classList.add('active');
-  document.getElementById('tabLeads').classList.remove('active');
-  document.getElementById('captacionView').style.display = 'block';
-  document.getElementById('leadsView').style.display = 'none';
-});
-document.getElementById('tabLeads').addEventListener('click', ()=>{
-  document.getElementById('tabLeads').classList.add('active');
-  document.getElementById('tabCaptacion').classList.remove('active');
-  document.getElementById('leadsView').style.display = 'block';
-  document.getElementById('captacionView').style.display = 'none';
-});
+function switchTab(tabId){
+  const tabs = { tabCaptacion: 'captacionView', tabLeads: 'leadsView', tabSeguimientos: 'seguimientosView' };
+  Object.keys(tabs).forEach(t=>{
+    document.getElementById(t).classList.toggle('active', t === tabId);
+    document.getElementById(tabs[t]).style.display = (t === tabId) ? 'block' : 'none';
+  });
+}
+document.getElementById('tabCaptacion').addEventListener('click', ()=>switchTab('tabCaptacion'));
+document.getElementById('tabLeads').addEventListener('click', ()=>switchTab('tabLeads'));
+document.getElementById('tabSeguimientos').addEventListener('click', ()=>switchTab('tabSeguimientos'));
 
 document.getElementById('list').addEventListener('click', async (e)=>{
   const editBtn = e.target.closest('.edit');
@@ -1506,6 +1561,10 @@ function render(){
     return matchSearch && matchEstado && matchZona;
   });
 
+  // Las fichas con recordatorio vencido o de hoy van primero, sin alterar
+  // el orden relativo del resto (más recientes primero).
+  filtered.sort((a,b) => (fichaIsDue(b, iso) ? 1 : 0) - (fichaIsDue(a, iso) ? 1 : 0));
+
   // Stats
   const today = todayStr();
   const totalFincas = entries.length;
@@ -1542,7 +1601,7 @@ function renderList(filtered, iso){
   const list = document.getElementById('list');
   list.innerHTML = filtered.map(en=>{
     const ubic = [en.numero ? `Nº ${en.numero}` : '', en.piso ? `${en.piso}º` : '', en.puerta || ''].filter(Boolean).join(' · ');
-    const isDue = en.recordatorio && en.recordatorio <= iso;
+    const isDue = fichaIsDue(en, iso);
     const lugar = [en.municipio ? escapeHtml(en.municipio) : '', en.zona ? 'Zona '+en.zona : ''].filter(Boolean).join(' · ');
     const notasSeguimiento = Array.isArray(en.notasSeguimiento) ? [...en.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
     const isOpenNote = openNoteFormId === en.id;
@@ -1717,40 +1776,17 @@ function renderLeadReminders(){
     </div>`;
 }
 
-function renderLeads(){
-  const search = document.getElementById('leadSearch').value.toLowerCase();
-  const filterEstado = document.getElementById('filterLeadEstado').value;
-
-  let filtered = leads.filter(l=>{
-    const vivienda = viviendaLabel(l.viviendaId).toLowerCase();
-    const matchSearch = !search ||
-      (l.nombre||'').toLowerCase().includes(search) ||
-      vivienda.includes(search);
-    const matchEstado = !filterEstado || l.estado === filterEstado;
-    return matchSearch && matchEstado;
-  });
-
-  renderLeadReminders();
-
-  const list = document.getElementById('leadsList');
-  list.classList.remove('loading');
-
-  if(filtered.length === 0){
-    list.innerHTML = `<div class="empty">
-      <div class="big">${leads.length===0 ? 'Aún no hay leads' : 'Sin resultados'}</div>
-      <div>${leads.length===0 ? 'Añade tu primer lead con "+ Nuevo lead"' : 'Prueba a cambiar la búsqueda o el filtro'}</div>
-    </div>`;
-    return;
-  }
-
-  const iso = todayISO();
-  list.innerHTML = filtered.map(l=>{
-    const notasSeguimiento = Array.isArray(l.notasSeguimiento) ? [...l.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
-    const isOpenNote = openLeadNoteFormId === l.id;
-    const isDue = l.cita && l.cita <= iso && l.estado !== 'cerrado' && l.estado !== 'descartado';
-    const vivienda = viviendaLabel(l.viviendaId);
-    const contacto = [l.telefono, l.email].filter(Boolean).join(' · ');
-    return `
+function leadCardHTML(l, iso){
+  const notasSeguimiento = Array.isArray(l.notasSeguimiento) ? [...l.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
+  const isOpenNote = openLeadNoteFormId === l.id;
+  const isDue = leadIsDue(l, iso);
+  const vivienda = viviendaLabel(l.viviendaId);
+  const contacto = [l.telefono, l.email].filter(Boolean).join(' · ');
+  const interesTags = [
+    l.interesMasViviendas ? 'Interés: más viviendas' : '',
+    l.interesAsesoria ? 'Interés: asesoría financiera' : ''
+  ].filter(Boolean);
+  return `
     <div class="entry ${isDue ? 'due' : ''}">
       <div class="entry-top">
         <div>
@@ -1763,6 +1799,7 @@ function renderLeads(){
       <div class="lead-tags">
         ${l.presupuesto ? `<span class="lead-tag">${escapeHtml(l.presupuesto)}</span>` : ''}
         ${l.origen ? `<span class="lead-tag">${escapeHtml(l.origen)}</span>` : ''}
+        ${interesTags.map(t=>`<span class="lead-tag">${escapeHtml(t)}</span>`).join('')}
         ${l.cita ? `<span class="lead-tag">Cita: ${l.cita.split('-').reverse().join('/')}${l.citaHora ? ' '+l.citaHora : ''}</span>` : ''}
         ${l.cita ? `<button class="lead-tag addcal-lead" data-id="${l.id}">📅 Añadir a calendario</button>` : ''}
       </div>
@@ -1780,7 +1817,76 @@ function renderLeads(){
         <button class="btn-primary savenote-lead" data-id="${l.id}" style="margin-top:6px;">Guardar nota</button>
       </div>
     </div>`;
-  }).join('');
+}
+
+function renderLeads(){
+  const search = document.getElementById('leadSearch').value.toLowerCase();
+  const filterEstado = document.getElementById('filterLeadEstado').value;
+  const iso = todayISO();
+
+  let filtered = leads.filter(l=>{
+    const vivienda = viviendaLabel(l.viviendaId).toLowerCase();
+    const matchSearch = !search ||
+      (l.nombre||'').toLowerCase().includes(search) ||
+      vivienda.includes(search);
+    const matchEstado = !filterEstado || l.estado === filterEstado;
+    return matchSearch && matchEstado;
+  });
+
+  // Los leads con cita vencida o de hoy van primero.
+  filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
+
+  renderLeadReminders();
+
+  const list = document.getElementById('leadsList');
+  list.classList.remove('loading');
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="big">${leads.length===0 ? 'Aún no hay leads' : 'Sin resultados'}</div>
+      <div>${leads.length===0 ? 'Añade tu primer lead con "+ Nuevo lead"' : 'Prueba a cambiar la búsqueda o el filtro'}</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(l => leadCardHTML(l, iso)).join('');
+}
+
+// ===== Render de Seguimientos =====
+function renderSeguimientos(){
+  const search = document.getElementById('seguimientoSearch').value.toLowerCase();
+  const filterInteres = document.getElementById('filterSeguimientoInteres').value;
+  const iso = todayISO();
+
+  let base = leads.filter(l => l.estado === 'seguimiento');
+
+  let filtered = base.filter(l=>{
+    const vivienda = viviendaLabel(l.viviendaId).toLowerCase();
+    const matchSearch = !search ||
+      (l.nombre||'').toLowerCase().includes(search) ||
+      vivienda.includes(search);
+    const matchInteres = !filterInteres ||
+      (filterInteres === 'viviendas' && l.interesMasViviendas) ||
+      (filterInteres === 'financiero' && l.interesAsesoria);
+    return matchSearch && matchInteres;
+  });
+
+  // Los seguimientos con cita vencida o de hoy van primero.
+  filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
+
+  const list = document.getElementById('seguimientosList');
+  if(!list) return;
+  list.classList.remove('loading');
+
+  if(filtered.length === 0){
+    list.innerHTML = `<div class="empty">
+      <div class="big">${base.length===0 ? 'Aún no hay seguimientos' : 'Sin resultados'}</div>
+      <div>${base.length===0 ? 'Cuando un lead no encaje pero valga la pena mantener el contacto, márcalo como "Seguimiento futuro"' : 'Prueba a cambiar la búsqueda o el filtro'}</div>
+    </div>`;
+    return;
+  }
+
+  list.innerHTML = filtered.map(l => leadCardHTML(l, iso)).join('');
 }
 
 // El arranque de la sincronización lo controla onAuthStateChanged,
