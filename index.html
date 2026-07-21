@@ -521,6 +521,8 @@
   .stamp.reservada{color:#A6650A; border-color:#A6650A; background:#FBE8C8;}
   .stamp.vendida{color:#1F6B3A; border-color:#1F6B3A; background:#D9EFDF; transform:rotate(-3deg) scale(1.02);}
   .stamp.retirada{color:#B23222; border-color:#B23222; background:#FADBD5;}
+  .stamp.alquiler{color:#0F6E68; border-color:#0F6E68; background:#D6EEEC;}
+  .stamp.alquilado{color:#7A5C2E; border-color:#7A5C2E; background:#F0E4D0; transform:rotate(-3deg) scale(1.02);}
 
   .interested-leads{
     margin-top:10px;
@@ -1005,6 +1007,8 @@
             <option value="reservada">Reservada</option>
             <option value="vendida">Vendida</option>
             <option value="retirada">Retirada</option>
+            <option value="alquiler">En alquiler</option>
+            <option value="alquilado">Alquilada</option>
           </select>
         </div>
       </div>
@@ -1028,6 +1032,8 @@
         <option value="reservada">Reservada</option>
         <option value="vendida">Vendida</option>
         <option value="retirada">Retirada</option>
+        <option value="alquiler">En alquiler</option>
+        <option value="alquilado">Alquilada</option>
       </select>
       <select id="filterPropZona">
         <option value="">Zona: Todas</option>
@@ -1126,6 +1132,7 @@ let openLeadNoteFormId = null;
 
 let editingPropId = null;
 let openPropNoteFormId = null;
+let currentTab = 'tabCaptacion';
 
 const leadEstadoLabels = {
   'nuevo': 'Nuevo',
@@ -1150,7 +1157,9 @@ const propEstadoLabels = {
   'en-venta': 'En venta',
   'reservada': 'Reservada',
   'vendida': 'Vendida',
-  'retirada': 'Retirada'
+  'retirada': 'Retirada',
+  'alquiler': 'En alquiler',
+  'alquilado': 'Alquilada'
 };
 
 function todayStr(){
@@ -1171,6 +1180,49 @@ function fichaIsDue(en, iso){
 // y el proceso sigue abierto (no cerrado ni descartado).
 function leadIsDue(l, iso){
   return !!(l.cita && l.cita <= iso && l.estado !== 'cerrado' && l.estado !== 'descartado');
+}
+
+// Recalcula los 4 números de la cabecera según la pestaña activa,
+// para que siempre muestren datos relevantes a lo que se está viendo.
+function renderStatsBar(){
+  const statsEl = document.getElementById('stats');
+  if(!statsEl) return;
+  const iso = todayISO();
+  let items = [];
+
+  if(currentTab === 'tabLeads'){
+    items = [
+      { label: 'Leads', value: leads.length },
+      { label: 'Abiertos', value: leads.filter(l => l.estado !== 'cerrado' && l.estado !== 'descartado').length },
+      { label: 'Citas hoy', value: leads.filter(l => leadIsDue(l, iso)).length },
+      { label: 'Cerrados', value: leads.filter(l => l.estado === 'cerrado').length }
+    ];
+  } else if(currentTab === 'tabSeguimientos'){
+    const base = leads.filter(l => l.estado === 'seguimiento');
+    items = [
+      { label: 'Seguimientos', value: base.length },
+      { label: 'Más viviendas', value: base.filter(l => l.interesMasViviendas).length },
+      { label: 'Asesoría', value: base.filter(l => l.interesAsesoria).length },
+      { label: 'Con cita', value: base.filter(l => !!l.cita).length }
+    ];
+  } else if(currentTab === 'tabPropiedades'){
+    items = [
+      { label: 'Propiedades', value: viviendas.length },
+      { label: 'En venta', value: viviendas.filter(v => v.estado === 'en-venta').length },
+      { label: 'En alquiler', value: viviendas.filter(v => v.estado === 'alquiler').length },
+      { label: 'Cerradas', value: viviendas.filter(v => v.estado === 'vendida' || v.estado === 'alquilado').length }
+    ];
+  } else {
+    const today = todayStr();
+    items = [
+      { label: 'Fincas', value: entries.length },
+      { label: 'Interesados', value: entries.filter(e => e.estado === 'interesado').length },
+      { label: 'Hoy', value: entries.filter(e => e.fecha === today).length },
+      { label: 'Por volver', value: entries.filter(e => e.estado === 'volver').length }
+    ];
+  }
+
+  statsEl.innerHTML = items.map(it => `<div class="stat"><span class="num">${it.value}</span><span class="lbl">${it.label}</span></div>`).join('');
 }
 
 // Escucha la colección "fichas" en Firestore en tiempo real: cualquier
@@ -1733,6 +1785,8 @@ function switchTab(tabId){
     document.getElementById(t).classList.toggle('active', t === tabId);
     document.getElementById(tabs[t]).style.display = (t === tabId) ? 'block' : 'none';
   });
+  currentTab = tabId;
+  renderStatsBar();
 }
 document.getElementById('tabCaptacion').addEventListener('click', ()=>switchTab('tabCaptacion'));
 document.getElementById('tabLeads').addEventListener('click', ()=>switchTab('tabLeads'));
@@ -1938,18 +1992,7 @@ function render(){
   // el orden relativo del resto (más recientes primero).
   filtered.sort((a,b) => (fichaIsDue(b, iso) ? 1 : 0) - (fichaIsDue(a, iso) ? 1 : 0));
 
-  // Stats
-  const today = todayStr();
-  const totalFincas = entries.length;
-  const interesados = entries.filter(e=>e.estado==='interesado').length;
-  const hoy = entries.filter(e=>e.fecha===today).length;
-  const volver = entries.filter(e=>e.estado==='volver').length;
-  const statNums = document.querySelectorAll('.stat .num');
-  statNums[0].textContent = totalFincas;
-  statNums[1].textContent = interesados;
-  statNums[2].textContent = hoy;
-  statNums[3].textContent = volver;
-
+  renderStatsBar();
   renderReminders();
 
   const list = document.getElementById('list');
@@ -2212,6 +2255,7 @@ function renderLeads(){
   // Los leads con cita vencida o de hoy van primero.
   filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
 
+  renderStatsBar();
   renderLeadReminders();
 
   const list = document.getElementById('leadsList');
@@ -2249,6 +2293,8 @@ function renderSeguimientos(){
 
   // Los seguimientos con cita vencida o de hoy van primero.
   filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
+
+  renderStatsBar();
 
   const list = document.getElementById('seguimientosList');
   if(!list) return;
@@ -2337,6 +2383,7 @@ function renderPropiedades(){
     return matchSearch && matchEstado && matchZona;
   });
 
+  renderStatsBar();
   list.classList.remove('loading');
 
   if(filtered.length === 0){
