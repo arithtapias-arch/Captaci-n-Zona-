@@ -698,6 +698,10 @@
         <label>Recordatorio (opc.)</label>
         <input type="date" id="f-recordatorio">
       </div>
+      <div class="field small">
+        <label>Hora (opc.)</label>
+        <input type="time" id="f-recordatorio-hora">
+      </div>
     </div>
     <div class="row">
       <div class="field">
@@ -770,7 +774,28 @@
   <div id="leadsView" style="display:none;">
     <button class="btn-primary" id="toggleLeadForm" style="margin-top:16px;">+ Nuevo lead</button>
 
-    <div class="form-card" id="leadFormCard">
+    <div class="toolbar">
+      <input type="text" id="leadSearch" placeholder="Buscar por nombre o vivienda...">
+      <select id="filterLeadEstado">
+        <option value="">Todos</option>
+        <option value="nuevo">Nuevo</option>
+        <option value="contactado">Contactado</option>
+        <option value="visita">Visita agendada</option>
+        <option value="oferta">Oferta presentada</option>
+        <option value="cerrado">Cerrado</option>
+        <option value="descartado">Descartado</option>
+        <option value="seguimiento">Seguimiento futuro</option>
+      </select>
+    </div>
+
+    <div id="leadReminders"></div>
+
+    <div id="leadsList" class="loading">Cargando leads...</div>
+
+    <button class="btn-secondary" id="exportLeadsBtn" style="width:100%; margin-top:6px;">Exportar CSV</button>
+  </div>
+
+  <div class="form-card" id="leadFormCard">
       <div class="form-title" id="leadFormTitle">Nuevo lead</div>
       <div class="row">
         <div class="field">
@@ -875,27 +900,6 @@
         <button class="cancel" id="cancelLeadForm">Cancelar</button>
         <button class="btn-primary" id="saveLead">Guardar lead</button>
       </div>
-    </div>
-
-    <div class="toolbar">
-      <input type="text" id="leadSearch" placeholder="Buscar por nombre o vivienda...">
-      <select id="filterLeadEstado">
-        <option value="">Todos</option>
-        <option value="nuevo">Nuevo</option>
-        <option value="contactado">Contactado</option>
-        <option value="visita">Visita agendada</option>
-        <option value="oferta">Oferta presentada</option>
-        <option value="cerrado">Cerrado</option>
-        <option value="descartado">Descartado</option>
-        <option value="seguimiento">Seguimiento futuro</option>
-      </select>
-    </div>
-
-    <div id="leadReminders"></div>
-
-    <div id="leadsList" class="loading">Cargando leads...</div>
-
-    <button class="btn-secondary" id="exportLeadsBtn" style="width:100%; margin-top:6px;">Exportar CSV</button>
   </div>
 
   <div id="seguimientosView" style="display:none;">
@@ -1171,15 +1175,23 @@ function todayISO(){
   return new Date().toISOString().slice(0,10);
 }
 
-// Una ficha "pide atención hoy" si su recordatorio está vencido o es de hoy.
-function fichaIsDue(en, iso){
-  return !!(en.recordatorio && en.recordatorio <= iso);
+// Da formato legible dd/mm/aaaa [hh:mm] a una fecha de visita/recordatorio.
+function formatVisitLabel(dateStr, hora){
+  if(!dateStr) return '';
+  const [y,m,d] = dateStr.split('-');
+  return `${d}/${m}/${y}${hora ? ' '+hora : ''}`;
 }
 
-// Un lead "pide atención hoy" si su próxima cita está vencida o es de hoy,
-// y el proceso sigue abierto (no cerrado ni descartado).
+// Una ficha "pide atención" solo el día exacto de su recordatorio.
+// Una vez pasado ese día, deja de considerarse pendiente (no se arrastra).
+function fichaIsDue(en, iso){
+  return !!(en.recordatorio && en.recordatorio === iso);
+}
+
+// Un lead "pide atención" solo el día exacto de su próxima cita,
+// y solo si el proceso sigue abierto (no cerrado ni descartado).
 function leadIsDue(l, iso){
-  return !!(l.cita && l.cita <= iso && l.estado !== 'cerrado' && l.estado !== 'descartado');
+  return !!(l.cita && l.cita === iso && l.estado !== 'cerrado' && l.estado !== 'descartado');
 }
 
 // Recalcula los 4 números de la cabecera según la pestaña activa,
@@ -1385,11 +1397,12 @@ function openForm(entry){
     document.getElementById('f-telefono').value = entry.telefono || '';
     document.getElementById('f-estado').value = entry.estado || 'pendiente';
     document.getElementById('f-recordatorio').value = entry.recordatorio || '';
+    document.getElementById('f-recordatorio-hora').value = entry.recordatorioHora || '';
     document.getElementById('f-notas').value = entry.notas || '';
   } else {
     editingId = null;
     document.getElementById('formTitle').textContent = 'Nueva ficha';
-    ['f-nombre','f-calle','f-numero','f-piso','f-puerta','f-telefono','f-notas','f-recordatorio','f-municipio'].forEach(id=>{
+    ['f-nombre','f-calle','f-numero','f-piso','f-puerta','f-telefono','f-notas','f-recordatorio','f-recordatorio-hora','f-municipio'].forEach(id=>{
       document.getElementById(id).value = '';
     });
     document.getElementById('f-estado').value = 'pendiente';
@@ -1735,6 +1748,8 @@ document.getElementById('saveEntry').addEventListener('click', async ()=>{
     document.getElementById('f-calle').focus();
     return;
   }
+  const nuevoRecordatorio = document.getElementById('f-recordatorio').value;
+  const nuevaHora = document.getElementById('f-recordatorio-hora').value;
   const data = {
     nombre: document.getElementById('f-nombre').value.trim(),
     municipio: document.getElementById('f-municipio').value.trim(),
@@ -1745,9 +1760,35 @@ document.getElementById('saveEntry').addEventListener('click', async ()=>{
     puerta: document.getElementById('f-puerta').value.trim(),
     telefono: document.getElementById('f-telefono').value.trim(),
     estado: document.getElementById('f-estado').value,
-    recordatorio: document.getElementById('f-recordatorio').value,
+    recordatorio: nuevoRecordatorio,
+    recordatorioHora: nuevaHora,
     notas: document.getElementById('f-notas').value.trim(),
   };
+
+  // Si la fecha/hora de la visita se ha creado o modificado respecto a
+  // lo que había guardado, lo dejamos anotado en el historial de visitas.
+  const anterior = editingId ? entries.find(x=>x.id===editingId) : null;
+  const recordatorioAnterior = anterior ? (anterior.recordatorio || '') : '';
+  const horaAnterior = anterior ? (anterior.recordatorioHora || '') : '';
+  if(nuevoRecordatorio !== recordatorioAnterior || nuevaHora !== horaAnterior){
+    let texto = null;
+    if(nuevoRecordatorio && !recordatorioAnterior){
+      texto = `Visita programada para ${formatVisitLabel(nuevoRecordatorio, nuevaHora)}`;
+    } else if(nuevoRecordatorio && recordatorioAnterior){
+      texto = `Visita reprogramada: ${formatVisitLabel(recordatorioAnterior, horaAnterior)} → ${formatVisitLabel(nuevoRecordatorio, nuevaHora)}`;
+    } else if(!nuevoRecordatorio && recordatorioAnterior){
+      texto = `Recordatorio de visita eliminado (estaba programada para ${formatVisitLabel(recordatorioAnterior, horaAnterior)})`;
+    }
+    if(texto){
+      const historialActual = Array.isArray(anterior?.historialVisitas) ? [...anterior.historialVisitas] : [];
+      historialActual.push({
+        texto,
+        fecha: new Date().toLocaleString('es-ES', {day:'2-digit', month:'2-digit', year:'numeric', hour:'2-digit', minute:'2-digit'}),
+        ts: Date.now()
+      });
+      data.historialVisitas = historialActual;
+    }
+  }
 
   if(editingId){
     await upsertFicha(editingId, data);
@@ -1799,6 +1840,13 @@ document.getElementById('list').addEventListener('click', async (e)=>{
   const addNoteBtn = e.target.closest('.addnote');
   const saveNoteBtn = e.target.closest('.savenote');
   const promoteBtn = e.target.closest('.promote-ficha');
+  const calBtn = e.target.closest('.addcal-ficha');
+  if(calBtn){
+    const id = calBtn.dataset.id;
+    const entry = entries.find(x=>x.id===id);
+    if(entry) addFichaToCalendar(entry);
+    return;
+  }
   if(promoteBtn){
     const id = promoteBtn.dataset.id;
     const entry = entries.find(x=>x.id===id);
@@ -1954,19 +2002,17 @@ document.getElementById('exportBtn').addEventListener('click', ()=>{
 function renderReminders(){
   const iso = todayISO();
   const due = entries
-    .filter(e => e.recordatorio && e.recordatorio <= iso)
-    .sort((a,b) => a.recordatorio.localeCompare(b.recordatorio));
+    .filter(e => fichaIsDue(e, iso))
+    .sort((a,b) => (a.recordatorioHora||'').localeCompare(b.recordatorioHora||''));
   const box = document.getElementById('reminders');
   if(due.length === 0){ box.innerHTML = ''; return; }
   box.innerHTML = `
     <div class="reminders">
-      <div class="reminders-title">A revisitar (${due.length})</div>
+      <div class="reminders-title">Para hoy (${due.length})</div>
       ${due.map(en => {
-        const overdue = en.recordatorio < iso;
-        const [y,m,d] = en.recordatorio.split('-');
         return `<div class="reminder-item">
           <span class="r-addr">${escapeHtml(en.calle)}${en.numero ? ', '+escapeHtml(en.numero) : ''}${en.nombre ? ' · '+escapeHtml(en.nombre) : ''}</span>
-          <span class="r-date">${overdue ? 'venció ' : ''}${d}/${m}/${y}</span>
+          <span class="r-date">${en.recordatorioHora || 'Hoy'}</span>
         </div>`;
       }).join('')}
     </div>`;
@@ -2020,6 +2066,7 @@ function renderList(filtered, iso){
     const isDue = fichaIsDue(en, iso);
     const lugar = [en.municipio ? escapeHtml(en.municipio) : '', en.zona ? 'Zona '+en.zona : ''].filter(Boolean).join(' · ');
     const notasSeguimiento = Array.isArray(en.notasSeguimiento) ? [...en.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
+    const historialVisitas = Array.isArray(en.historialVisitas) ? [...en.historialVisitas].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
     const isOpenNote = openNoteFormId === en.id;
     return `
     <div class="entry ${isDue ? 'due' : ''}">
@@ -2032,8 +2079,17 @@ function renderList(filtered, iso){
         <div class="stamp ${en.estado}">${estadoLabels[en.estado] || en.estado}</div>
       </div>
       <div class="entry-meta">${ubic ? ubic + ' &nbsp;·&nbsp; ' : ''}${en.fecha}${en.telefono ? ' &nbsp;·&nbsp; '+escapeHtml(en.telefono) : ''}</div>
+      ${en.recordatorio ? `<div class="lead-tags">
+        <span class="lead-tag">Visita: ${formatVisitLabel(en.recordatorio, en.recordatorioHora)}</span>
+        <button class="lead-tag addcal-ficha" data-id="${en.id}">📅 Añadir a calendario</button>
+      </div>` : ''}
       ${en.notas ? `<div class="entry-notes">${escapeHtml(en.notas)}</div>` : ''}
       ${notasSeguimiento.length ? `<div class="note-history">${notasSeguimiento.map(n=>`
+        <div class="note-entry"><span class="note-date">${n.fecha}</span>${escapeHtml(n.texto)}</div>
+      `).join('')}</div>` : ''}
+      ${historialVisitas.length ? `<div class="note-history">
+        <div class="interested-leads-title">Historial de visitas</div>
+        ${historialVisitas.map(n=>`
         <div class="note-entry"><span class="note-date">${n.fecha}</span>${escapeHtml(n.texto)}</div>
       `).join('')}</div>` : ''}
       ${en.estado === 'captado' ? `<div class="entry-actions">
@@ -2100,12 +2156,13 @@ function escapeICS(str){
     .replace(/\n/g,'\\n');
 }
 
-function generateICS(lead){
-  const vivienda = viviendaLabel(lead.viviendaId);
-  const uid = 'lead-' + lead.id + '-' + Date.now() + '@captacionzona';
+// Genera el contenido de un evento .ics genérico. dateStr en formato
+// YYYY-MM-DD; timeStr opcional en formato HH:MM (si no se da, evento de
+// todo el día).
+function buildICS({ uid, title, location, description, dateStr, timeStr }){
   const dtstamp = formatICSDateUTC(new Date());
-  const [y, m, d] = lead.cita.split('-').map(Number);
-  const allDay = !lead.citaHora;
+  const [y, m, d] = dateStr.split('-').map(Number);
+  const allDay = !timeStr;
   let dtstartLine, dtendLine;
 
   if(allDay){
@@ -2115,7 +2172,7 @@ function generateICS(lead){
     dtstartLine = 'DTSTART;VALUE=DATE:' + startStr;
     dtendLine = 'DTEND;VALUE=DATE:' + endStr;
   } else {
-    const [hh, mm] = lead.citaHora.split(':').map(Number);
+    const [hh, mm] = timeStr.split(':').map(Number);
     const startStr = `${y}${pad2(m)}${pad2(d)}T${pad2(hh)}${pad2(mm)}00`;
     const endDate = new Date(y, m-1, d, hh, mm+60);
     const endStr = `${endDate.getFullYear()}${pad2(endDate.getMonth()+1)}${pad2(endDate.getDate())}T${pad2(endDate.getHours())}${pad2(endDate.getMinutes())}00`;
@@ -2123,13 +2180,9 @@ function generateICS(lead){
     dtendLine = 'DTEND:' + endStr;
   }
 
-  const summary = escapeICS(`Visita: ${lead.nombre}${vivienda ? ' — '+vivienda : ''}`);
-  const location = escapeICS(vivienda);
-  const descParts = [];
-  if(lead.telefono) descParts.push('Tel: '+lead.telefono);
-  if(lead.presupuesto) descParts.push('Presupuesto: '+lead.presupuesto);
-  if(lead.notas) descParts.push(lead.notas);
-  const description = escapeICS(descParts.join('\n'));
+  const summary = escapeICS(title);
+  const loc = escapeICS(location || '');
+  const desc = escapeICS(description || '');
 
   const lines = [
     'BEGIN:VCALENDAR',
@@ -2142,8 +2195,8 @@ function generateICS(lead){
     dtstartLine,
     dtendLine,
     'SUMMARY:'+summary,
-    location ? 'LOCATION:'+location : null,
-    description ? 'DESCRIPTION:'+description : null,
+    loc ? 'LOCATION:'+loc : null,
+    desc ? 'DESCRIPTION:'+desc : null,
     'END:VEVENT',
     'END:VCALENDAR'
   ].filter(Boolean);
@@ -2151,10 +2204,9 @@ function generateICS(lead){
   return lines.join('\r\n');
 }
 
-function addLeadToCalendar(lead){
-  if(!lead.cita) return;
-  const ics = generateICS(lead);
-  const blob = new Blob([ics], {type:'text/calendar;charset=utf-8'});
+// Dispara la descarga/apertura del archivo .ics generado.
+function downloadICS(icsContent){
+  const blob = new Blob([icsContent], {type:'text/calendar;charset=utf-8'});
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
@@ -2163,6 +2215,47 @@ function addLeadToCalendar(lead){
   a.click();
   a.remove();
   setTimeout(()=>URL.revokeObjectURL(url), 4000);
+}
+
+function generateICS(lead){
+  const vivienda = viviendaLabel(lead.viviendaId);
+  const descParts = [];
+  if(lead.telefono) descParts.push('Tel: '+lead.telefono);
+  if(lead.presupuesto) descParts.push('Presupuesto: '+lead.presupuesto);
+  if(lead.notas) descParts.push(lead.notas);
+  return buildICS({
+    uid: 'lead-' + lead.id + '-' + Date.now() + '@captacionzona',
+    title: `Visita: ${lead.nombre}${vivienda ? ' — '+vivienda : ''}`,
+    location: vivienda,
+    description: descParts.join('\n'),
+    dateStr: lead.cita,
+    timeStr: lead.citaHora
+  });
+}
+
+function addLeadToCalendar(lead){
+  if(!lead.cita) return;
+  downloadICS(generateICS(lead));
+}
+
+function generateFichaICS(en){
+  const direccion = [en.calle, en.numero].filter(Boolean).join(', ');
+  const descParts = [];
+  if(en.telefono) descParts.push('Tel: '+en.telefono);
+  if(en.notas) descParts.push(en.notas);
+  return buildICS({
+    uid: 'ficha-' + en.id + '-' + Date.now() + '@captacionzona',
+    title: `Volver a visitar: ${en.nombre ? en.nombre+' — ' : ''}${direccion}`,
+    location: direccion,
+    description: descParts.join('\n'),
+    dateStr: en.recordatorio,
+    timeStr: en.recordatorioHora
+  });
+}
+
+function addFichaToCalendar(en){
+  if(!en.recordatorio) return;
+  downloadICS(generateFichaICS(en));
 }
 
 function escapeHtml(str){
@@ -2176,20 +2269,18 @@ function escapeHtml(str){
 function renderLeadReminders(){
   const iso = todayISO();
   const due = leads
-    .filter(l => l.cita && l.cita <= iso && l.estado !== 'cerrado' && l.estado !== 'descartado')
-    .sort((a,b) => a.cita.localeCompare(b.cita));
+    .filter(l => leadIsDue(l, iso))
+    .sort((a,b) => (a.citaHora||'').localeCompare(b.citaHora||''));
   const box = document.getElementById('leadReminders');
   if(!box) return;
   if(due.length === 0){ box.innerHTML = ''; return; }
   box.innerHTML = `
     <div class="reminders">
-      <div class="reminders-title">Próximas citas (${due.length})</div>
+      <div class="reminders-title">Citas de hoy (${due.length})</div>
       ${due.map(l => {
-        const overdue = l.cita < iso;
-        const [y,m,d] = l.cita.split('-');
         return `<div class="reminder-item">
           <span class="r-addr">${escapeHtml(l.nombre)}</span>
-          <span class="r-date">${overdue ? 'venció ' : ''}${d}/${m}/${y}</span>
+          <span class="r-date">${l.citaHora || 'Hoy'}</span>
         </div>`;
       }).join('')}
     </div>`;
