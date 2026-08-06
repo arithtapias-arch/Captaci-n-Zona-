@@ -705,6 +705,12 @@
     </div>
     <div class="row">
       <div class="field">
+        <label>URL propiedad en venta (opc.)</label>
+        <input type="url" id="f-url" placeholder="https://www.idealista.com/inmueble/...">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
         <label>Notas</label>
         <textarea id="f-notas" placeholder="Detalles de la conversación, mejor horario para volver, etc."></textarea>
       </div>
@@ -796,110 +802,110 @@
   </div>
 
   <div class="form-card" id="leadFormCard">
-      <div class="form-title" id="leadFormTitle">Nuevo lead</div>
-      <div class="row">
-        <div class="field">
-          <label>Nombre</label>
-          <input type="text" id="l-nombre" placeholder="Nombre del lead">
+    <div class="form-title" id="leadFormTitle">Nuevo lead</div>
+    <div class="row">
+      <div class="field">
+        <label>Nombre</label>
+        <input type="text" id="l-nombre" placeholder="Nombre del lead">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Teléfono</label>
+        <input type="text" id="l-telefono" placeholder="600 000 000">
+      </div>
+      <div class="field">
+        <label>Email</label>
+        <input type="email" id="l-email" placeholder="correo@ejemplo.com">
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Vivienda de interés</label>
+        <select id="l-vivienda">
+          <option value="">Selecciona una vivienda...</option>
+        </select>
+      </div>
+    </div>
+    <div class="row" id="viviendaQuickAdd" style="display:none;">
+      <div class="field">
+        <label>Dirección de la vivienda</label>
+        <input type="text" id="v-direccion" placeholder="Calle, número, municipio">
+      </div>
+      <div class="field small">
+        <label>Alias (opc.)</label>
+        <input type="text" id="v-alias" placeholder="Ref. 12">
+      </div>
+    </div>
+    <div class="form-actions" id="viviendaQuickAddActions" style="display:none; margin-bottom:10px;">
+      <button class="cancel" id="viviendaQuickCancel">Cancelar</button>
+      <button class="btn-primary" id="viviendaQuickSave">Añadir vivienda</button>
+    </div>
+    <button class="btn-secondary" id="viviendaQuickToggle" style="width:100%; margin-bottom:10px;">+ Añadir vivienda nueva</button>
+    <div class="row">
+      <div class="field">
+        <label>Presupuesto</label>
+        <input type="text" id="l-presupuesto" placeholder="150.000 - 180.000 €">
+      </div>
+      <div class="field">
+        <label>Origen</label>
+        <select id="l-origen">
+          <option value="">-</option>
+          <option value="Instagram">Instagram</option>
+          <option value="Puerta a puerta">Puerta a puerta</option>
+          <option value="Portal inmobiliario">Portal inmobiliario</option>
+          <option value="Referido">Referido</option>
+          <option value="Otro">Otro</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Estado</label>
+        <select id="l-estado">
+          <option value="nuevo">Nuevo</option>
+          <option value="contactado">Contactado</option>
+          <option value="visita">Visita agendada</option>
+          <option value="oferta">Oferta presentada</option>
+          <option value="cerrado">Cerrado (ganado)</option>
+          <option value="descartado">Descartado</option>
+          <option value="seguimiento">Seguimiento futuro</option>
+        </select>
+      </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Interés a futuro (opc.)</label>
+        <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
+            <input type="checkbox" id="l-interes-viviendas" style="width:auto;"> Más viviendas
+          </label>
+          <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
+            <input type="checkbox" id="l-interes-financiero" style="width:auto;"> Asesoría financiera
+          </label>
         </div>
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Teléfono</label>
-          <input type="text" id="l-telefono" placeholder="600 000 000">
-        </div>
-        <div class="field">
-          <label>Email</label>
-          <input type="email" id="l-email" placeholder="correo@ejemplo.com">
-        </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Próxima cita (opc.)</label>
+        <input type="date" id="l-cita">
       </div>
-      <div class="row">
-        <div class="field">
-          <label>Vivienda de interés</label>
-          <select id="l-vivienda">
-            <option value="">Selecciona una vivienda...</option>
-          </select>
-        </div>
+      <div class="field small">
+        <label>Hora (opc.)</label>
+        <input type="time" id="l-cita-hora">
       </div>
-      <div class="row" id="viviendaQuickAdd" style="display:none;">
-        <div class="field">
-          <label>Dirección de la vivienda</label>
-          <input type="text" id="v-direccion" placeholder="Calle, número, municipio">
-        </div>
-        <div class="field small">
-          <label>Alias (opc.)</label>
-          <input type="text" id="v-alias" placeholder="Ref. 12">
-        </div>
+    </div>
+    <div class="row">
+      <div class="field">
+        <label>Notas</label>
+        <textarea id="l-notas" placeholder="Preferencias, condiciones, contexto..."></textarea>
       </div>
-      <div class="form-actions" id="viviendaQuickAddActions" style="display:none; margin-bottom:10px;">
-        <button class="cancel" id="viviendaQuickCancel">Cancelar</button>
-        <button class="btn-primary" id="viviendaQuickSave">Añadir vivienda</button>
-      </div>
-      <button class="btn-secondary" id="viviendaQuickToggle" style="width:100%; margin-bottom:10px;">+ Añadir vivienda nueva</button>
-      <div class="row">
-        <div class="field">
-          <label>Presupuesto</label>
-          <input type="text" id="l-presupuesto" placeholder="150.000 - 180.000 €">
-        </div>
-        <div class="field">
-          <label>Origen</label>
-          <select id="l-origen">
-            <option value="">-</option>
-            <option value="Instagram">Instagram</option>
-            <option value="Puerta a puerta">Puerta a puerta</option>
-            <option value="Portal inmobiliario">Portal inmobiliario</option>
-            <option value="Referido">Referido</option>
-            <option value="Otro">Otro</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Estado</label>
-          <select id="l-estado">
-            <option value="nuevo">Nuevo</option>
-            <option value="contactado">Contactado</option>
-            <option value="visita">Visita agendada</option>
-            <option value="oferta">Oferta presentada</option>
-            <option value="cerrado">Cerrado (ganado)</option>
-            <option value="descartado">Descartado</option>
-            <option value="seguimiento">Seguimiento futuro</option>
-          </select>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Interés a futuro (opc.)</label>
-          <div style="display:flex; gap:16px; margin-top:6px; flex-wrap:wrap;">
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
-              <input type="checkbox" id="l-interes-viviendas" style="width:auto;"> Más viviendas
-            </label>
-            <label style="display:flex; align-items:center; gap:6px; font-size:13px; text-transform:none; letter-spacing:0; font-weight:400; color:var(--ink);">
-              <input type="checkbox" id="l-interes-financiero" style="width:auto;"> Asesoría financiera
-            </label>
-          </div>
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Próxima cita (opc.)</label>
-          <input type="date" id="l-cita">
-        </div>
-        <div class="field small">
-          <label>Hora (opc.)</label>
-          <input type="time" id="l-cita-hora">
-        </div>
-      </div>
-      <div class="row">
-        <div class="field">
-          <label>Notas</label>
-          <textarea id="l-notas" placeholder="Preferencias, condiciones, contexto..."></textarea>
-        </div>
-      </div>
-      <div class="form-actions">
-        <button class="cancel" id="cancelLeadForm">Cancelar</button>
-        <button class="btn-primary" id="saveLead">Guardar lead</button>
-      </div>
+    </div>
+    <div class="form-actions">
+      <button class="cancel" id="cancelLeadForm">Cancelar</button>
+      <button class="btn-primary" id="saveLead">Guardar lead</button>
+    </div>
   </div>
 
   <div id="seguimientosView" style="display:none;">
@@ -1175,27 +1181,20 @@ function todayISO(){
   return new Date().toISOString().slice(0,10);
 }
 
-// Da formato legible dd/mm/aaaa [hh:mm] a una fecha de visita/recordatorio.
 function formatVisitLabel(dateStr, hora){
   if(!dateStr) return '';
   const [y,m,d] = dateStr.split('-');
   return `${d}/${m}/${y}${hora ? ' '+hora : ''}`;
 }
 
-// Una ficha "pide atención" solo el día exacto de su recordatorio.
-// Una vez pasado ese día, deja de considerarse pendiente (no se arrastra).
 function fichaIsDue(en, iso){
   return !!(en.recordatorio && en.recordatorio === iso);
 }
 
-// Un lead "pide atención" solo el día exacto de su próxima cita,
-// y solo si el proceso sigue abierto (no cerrado ni descartado).
 function leadIsDue(l, iso){
   return !!(l.cita && l.cita === iso && l.estado !== 'cerrado' && l.estado !== 'descartado');
 }
 
-// Recalcula los 4 números de la cabecera según la pestaña activa,
-// para que siempre muestren datos relevantes a lo que se está viendo.
 function renderStatsBar(){
   const statsEl = document.getElementById('stats');
   if(!statsEl) return;
@@ -1237,8 +1236,6 @@ function renderStatsBar(){
   statsEl.innerHTML = items.map(it => `<div class="stat"><span class="num">${it.value}</span><span class="lbl">${it.label}</span></div>`).join('');
 }
 
-// Escucha la colección "fichas" en Firestore en tiempo real: cualquier
-// cambio hecho desde otro dispositivo llega aquí automáticamente.
 function startSync(){
   fichasRef.onSnapshot(
     snapshot => {
@@ -1254,8 +1251,6 @@ function startSync(){
   );
 }
 
-// Guarda o actualiza una sola ficha en la nube (merge conserva los
-// campos que no se estén tocando, como la fecha de creación).
 async function upsertFicha(id, data){
   try{
     await fichasRef.doc(id).set(data, {merge:true});
@@ -1292,7 +1287,6 @@ function updateSyncNotice(ok, errorMsg){
   }
 }
 
-// ===== Leads =====
 function startLeadsSync(){
   leadsRef.onSnapshot(
     snapshot => {
@@ -1328,7 +1322,6 @@ async function deleteLead(id){
   }
 }
 
-// ===== Viviendas en gestión (para el desplegable de leads) =====
 function startViviendasSync(){
   viviendasRef.onSnapshot(
     snapshot => {
@@ -1398,11 +1391,12 @@ function openForm(entry){
     document.getElementById('f-estado').value = entry.estado || 'pendiente';
     document.getElementById('f-recordatorio').value = entry.recordatorio || '';
     document.getElementById('f-recordatorio-hora').value = entry.recordatorioHora || '';
+    document.getElementById('f-url').value = entry.url || '';
     document.getElementById('f-notas').value = entry.notas || '';
   } else {
     editingId = null;
     document.getElementById('formTitle').textContent = 'Nueva ficha';
-    ['f-nombre','f-calle','f-numero','f-piso','f-puerta','f-telefono','f-notas','f-recordatorio','f-recordatorio-hora','f-municipio'].forEach(id=>{
+    ['f-nombre','f-calle','f-numero','f-piso','f-puerta','f-telefono','f-notas','f-recordatorio','f-recordatorio-hora','f-municipio','f-url'].forEach(id=>{
       document.getElementById(id).value = '';
     });
     document.getElementById('f-estado').value = 'pendiente';
@@ -1419,7 +1413,6 @@ function closeForm(){
 document.getElementById('toggleForm').addEventListener('click', ()=>openForm(null));
 document.getElementById('cancelForm').addEventListener('click', closeForm);
 
-// ===== Formulario de leads =====
 function openLeadForm(lead, presetEstado){
   document.getElementById('leadFormCard').classList.add('open');
   document.getElementById('toggleLeadForm').style.display = 'none';
@@ -1464,7 +1457,6 @@ function closeLeadForm(){
 document.getElementById('toggleLeadForm').addEventListener('click', ()=>openLeadForm(null));
 document.getElementById('cancelLeadForm').addEventListener('click', closeLeadForm);
 
-// ===== Formulario de propiedades =====
 function openPropForm(prop){
   document.getElementById('propFormCard').classList.add('open');
   document.getElementById('togglePropForm').style.display = 'none';
@@ -1762,11 +1754,10 @@ document.getElementById('saveEntry').addEventListener('click', async ()=>{
     estado: document.getElementById('f-estado').value,
     recordatorio: nuevoRecordatorio,
     recordatorioHora: nuevaHora,
+    url: document.getElementById('f-url').value.trim(),
     notas: document.getElementById('f-notas').value.trim(),
   };
 
-  // Si la fecha/hora de la visita se ha creado o modificado respecto a
-  // lo que había guardado, lo dejamos anotado en el historial de visitas.
   const anterior = editingId ? entries.find(x=>x.id===editingId) : null;
   const recordatorioAnterior = anterior ? (anterior.recordatorio || '') : '';
   const horaAnterior = anterior ? (anterior.recordatorioHora || '') : '';
@@ -1984,12 +1975,12 @@ document.getElementById('restoreConfirm').addEventListener('click', async ()=>{
 });
 
 document.getElementById('exportBtn').addEventListener('click', ()=>{
-  const headers = ['Fecha','Municipio','Zona','Nombre','Calle','Nº Finca','Piso','Puerta','Teléfono','Estado','Notas','Seguimiento'];
+  const headers = ['Fecha','Municipio','Zona','Nombre','Calle','Nº Finca','Piso','Puerta','Teléfono','Estado','URL','Notas','Seguimiento'];
   const rows = entries.map(en=>{
     const seguimiento = Array.isArray(en.notasSeguimiento)
       ? en.notasSeguimiento.map(n=>`[${n.fecha}] ${n.texto}`).join(' | ')
       : '';
-    return [en.fecha, en.municipio, en.zona, en.nombre, en.calle, en.numero, en.piso, en.puerta, en.telefono, estadoLabels[en.estado]||en.estado, (en.notas||'').replace(/\n/g,' '), seguimiento];
+    return [en.fecha, en.municipio, en.zona, en.nombre, en.calle, en.numero, en.piso, en.puerta, en.telefono, estadoLabels[en.estado]||en.estado, en.url, (en.notas||'').replace(/\n/g,' '), seguimiento];
   });
   const csv = [headers, ...rows].map(r=>r.map(c=>`"${(c||'').toString().replace(/"/g,'""')}"`).join(',')).join('\n');
   openTextPanel(
@@ -2034,8 +2025,6 @@ function render(){
     return matchSearch && matchEstado && matchZona;
   });
 
-  // Las fichas con recordatorio vencido o de hoy van primero, sin alterar
-  // el orden relativo del resto (más recientes primero).
   filtered.sort((a,b) => (fichaIsDue(b, iso) ? 1 : 0) - (fichaIsDue(a, iso) ? 1 : 0));
 
   renderStatsBar();
@@ -2079,9 +2068,10 @@ function renderList(filtered, iso){
         <div class="stamp ${en.estado}">${estadoLabels[en.estado] || en.estado}</div>
       </div>
       <div class="entry-meta">${ubic ? ubic + ' &nbsp;·&nbsp; ' : ''}${en.fecha}${en.telefono ? ' &nbsp;·&nbsp; '+escapeHtml(en.telefono) : ''}</div>
-      ${en.recordatorio ? `<div class="lead-tags">
-        <span class="lead-tag">Visita: ${formatVisitLabel(en.recordatorio, en.recordatorioHora)}</span>
-        <button class="lead-tag addcal-ficha" data-id="${en.id}">📅 Añadir a calendario</button>
+      ${(en.recordatorio || en.url) ? `<div class="lead-tags">
+        ${en.recordatorio ? `<span class="lead-tag">Visita: ${formatVisitLabel(en.recordatorio, en.recordatorioHora)}</span>
+        <button class="lead-tag addcal-ficha" data-id="${en.id}">📅 Añadir a calendario</button>` : ''}
+        ${en.url ? `<a class="lead-tag" href="${escapeHtml(en.url)}" target="_blank" rel="noopener" style="text-decoration:none;">🔗 Ver anuncio</a>` : ''}
       </div>` : ''}
       ${en.notas ? `<div class="entry-notes">${escapeHtml(en.notas)}</div>` : ''}
       ${notasSeguimiento.length ? `<div class="note-history">${notasSeguimiento.map(n=>`
@@ -2140,7 +2130,6 @@ function renderStreets(filtered){
   }).join('');
 }
 
-// ===== Calendario nativo (.ics) =====
 function pad2(n){ return String(n).padStart(2,'0'); }
 
 function formatICSDateUTC(date){
@@ -2156,9 +2145,6 @@ function escapeICS(str){
     .replace(/\n/g,'\\n');
 }
 
-// Genera el contenido de un evento .ics genérico. dateStr en formato
-// YYYY-MM-DD; timeStr opcional en formato HH:MM (si no se da, evento de
-// todo el día).
 function buildICS({ uid, title, location, description, dateStr, timeStr }){
   const dtstamp = formatICSDateUTC(new Date());
   const [y, m, d] = dateStr.split('-').map(Number);
@@ -2204,7 +2190,6 @@ function buildICS({ uid, title, location, description, dateStr, timeStr }){
   return lines.join('\r\n');
 }
 
-// Dispara la descarga/apertura del archivo .ics generado.
 function downloadICS(icsContent){
   const blob = new Blob([icsContent], {type:'text/calendar;charset=utf-8'});
   const url = URL.createObjectURL(blob);
@@ -2265,7 +2250,6 @@ function escapeHtml(str){
   return div.innerHTML;
 }
 
-// ===== Render de Leads =====
 function renderLeadReminders(){
   const iso = todayISO();
   const due = leads
@@ -2343,7 +2327,6 @@ function renderLeads(){
     return matchSearch && matchEstado;
   });
 
-  // Los leads con cita vencida o de hoy van primero.
   filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
 
   renderStatsBar();
@@ -2363,7 +2346,6 @@ function renderLeads(){
   list.innerHTML = filtered.map(l => leadCardHTML(l, iso)).join('');
 }
 
-// ===== Render de Seguimientos =====
 function renderSeguimientos(){
   const search = document.getElementById('seguimientoSearch').value.toLowerCase();
   const filterInteres = document.getElementById('filterSeguimientoInteres').value;
@@ -2382,7 +2364,6 @@ function renderSeguimientos(){
     return matchSearch && matchInteres;
   });
 
-  // Los seguimientos con cita vencida o de hoy van primero.
   filtered.sort((a,b) => (leadIsDue(b, iso) ? 1 : 0) - (leadIsDue(a, iso) ? 1 : 0));
 
   renderStatsBar();
@@ -2402,7 +2383,6 @@ function renderSeguimientos(){
   list.innerHTML = filtered.map(l => leadCardHTML(l, iso)).join('');
 }
 
-// ===== Render de Propiedades =====
 function propertyCardHTML(v){
   const notasSeguimiento = Array.isArray(v.notasSeguimiento) ? [...v.notasSeguimiento].sort((a,b)=>(b.ts||0)-(a.ts||0)) : [];
   const isOpenNote = openPropNoteFormId === v.id;
@@ -2487,9 +2467,6 @@ function renderPropiedades(){
 
   list.innerHTML = filtered.map(v => propertyCardHTML(v)).join('');
 }
-
-// El arranque de la sincronización lo controla onAuthStateChanged,
-// una vez la persona ha iniciado sesión correctamente.
 </script>
 
 </body>
