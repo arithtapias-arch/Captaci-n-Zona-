@@ -1,0 +1,48 @@
+REGLA PARA QUE LA PÁGINA vender.html PUEDA GUARDAR LEADS EN EL CRM
+=================================================================
+
+Dónde pegarla:
+Firebase Console > proyecto "captacionzona" > Firestore Database > pestaña "Reglas".
+
+Pega el bloque de abajo DENTRO de:
+  match /databases/{database}/documents {
+      ...aquí, junto a tus reglas actuales...
+  }
+
+No borres nada de lo que ya tienes. Este bloque solo AÑADE un permiso:
+cualquiera puede CREAR un lead nuevo desde la web, con estos límites:
+  - No puede leer, editar ni borrar nada.
+  - Solo entra con estado "nuevo", sin responsable y con canal "Landing web".
+  - Solo admite los campos del formulario y con tamaño limitado.
+Después pulsa "Publicar".
+
+---------------- COPIAR DESDE AQUÍ ----------------
+
+    match /leads/{leadId} {
+      allow create: if request.auth == null
+        && leadId.matches('l[0-9]{13}[a-z0-9]{1,8}')
+        && request.resource.data.keys().hasOnly([
+             'tipoLead','estado','nombre','apellidos','telefono','email','origen','idioma',
+             'canal','notas','motivoDetalle','fecha','fechaISO','createdAt','ownerUid',
+             'ownerNombre','consentimiento','utm_source','utm_medium','utm_campaign',
+             'utm_content','inmuebleVenta','poblacionVenta','plazo','motivo',
+             'zonasInteres','financiacion','momento','necesitaVender'])
+        && request.resource.data.tipoLead in ['vendedor','comprador','ambos']
+        && request.resource.data.estado == 'nuevo'
+        && request.resource.data.canal == 'Landing web'
+        && request.resource.data.ownerUid == ''
+        && request.resource.data.ownerNombre == ''
+        && request.resource.data.consentimiento == true
+        && request.resource.data.origen in ['Instagram','Otro']
+        && request.resource.data.nombre is string
+        && request.resource.data.nombre.size() > 0 && request.resource.data.nombre.size() <= 60
+        && request.resource.data.telefono is string
+        && request.resource.data.telefono.size() >= 9 && request.resource.data.telefono.size() <= 20
+        && request.resource.data.email.size() <= 120
+        && request.resource.data.apellidos.size() <= 80
+        && request.resource.data.notas.size() <= 1000
+        && request.resource.data.motivoDetalle.size() <= 1200
+        && request.resource.data.createdAt is int;
+    }
+
+---------------- HASTA AQUÍ ----------------
